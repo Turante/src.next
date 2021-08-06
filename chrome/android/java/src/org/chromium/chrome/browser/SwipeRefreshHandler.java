@@ -30,6 +30,8 @@ import org.chromium.ui.OverscrollAction;
 import org.chromium.ui.OverscrollRefreshHandler;
 import org.chromium.ui.base.WindowAndroid;
 
+import org.chromium.base.ContextUtils;
+
 /**
  * An overscroll handler implemented in terms a modified version of the Android
  * compat library's SwipeRefreshLayout effect.
@@ -223,6 +225,8 @@ public class SwipeRefreshHandler
         if (mSwipeType == OverscrollAction.PULL_TO_REFRESH) {
             mSwipeRefreshLayout.pull(yDelta);
         } else if (mSwipeType == OverscrollAction.HISTORY_NAVIGATION) {
+            if (!ContextUtils.getAppSharedPreferences().getBoolean("side_swipe_mode_enabled", true))
+                return;
             if (mNavigationCoordinator != null) mNavigationCoordinator.pull(xDelta);
         }
         TraceEvent.end("SwipeRefreshHandler.pull");
@@ -234,6 +238,8 @@ public class SwipeRefreshHandler
         if (mSwipeType == OverscrollAction.PULL_TO_REFRESH) {
             mSwipeRefreshLayout.release(allowRefresh);
         } else if (mSwipeType == OverscrollAction.HISTORY_NAVIGATION) {
+            if (!ContextUtils.getAppSharedPreferences().getBoolean("side_swipe_mode_enabled", true))
+                return;
             if (mNavigationCoordinator != null) mNavigationCoordinator.release(allowRefresh);
         }
         TraceEvent.end("SwipeRefreshHandler.release");
