@@ -84,7 +84,7 @@ void BoxPainterBase::PaintNormalBoxShadow(const PaintInfo& info,
                                           const ComputedStyle& style,
                                           PhysicalBoxSides sides_to_include,
                                           bool background_is_skipped) {
-  if (!style.BoxShadow() || info.context.IsDarkModeEnabled())
+  if (!style.BoxShadow() || style.DarkColorScheme())
     return;
   GraphicsContext& context = info.context;
 
@@ -190,7 +190,7 @@ void BoxPainterBase::PaintInsetBoxShadowWithBorderRect(
     const PhysicalRect& border_rect,
     const ComputedStyle& style,
     PhysicalBoxSides sides_to_include) {
-  if (!style.BoxShadow() || info.context.IsDarkModeEnabled())
+  if (!style.BoxShadow() || style.DarkColorScheme())
     return;
   auto bounds = RoundedBorderGeometry::PixelSnappedRoundedInnerBorder(
       style, border_rect, sides_to_include);
@@ -201,7 +201,7 @@ void BoxPainterBase::PaintInsetBoxShadowWithInnerRect(
     const PaintInfo& info,
     const PhysicalRect& inner_rect,
     const ComputedStyle& style) {
-  if (!style.BoxShadow() || info.context.IsDarkModeEnabled())
+  if (!style.BoxShadow() || style.DarkColorScheme())
     return;
   auto bounds = RoundedBorderGeometry::PixelSnappedRoundedBorderWithOutsets(
       style, inner_rect, LayoutRectOutsets());
@@ -252,7 +252,7 @@ void BoxPainterBase::PaintInsetBoxShadow(const PaintInfo& info,
                                          const FloatRoundedRect& bounds,
                                          const ComputedStyle& style,
                                          PhysicalBoxSides sides_to_include) {
-  if (info.context.IsDarkModeEnabled())
+  if (style.DarkColorScheme())
     return;
   GraphicsContext& context = info.context;
 
