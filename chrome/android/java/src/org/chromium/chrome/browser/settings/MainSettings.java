@@ -395,6 +395,8 @@ public class MainSettings extends PreferenceFragmentCompat
     }
 
     private void onSyncPromoPreferenceStateChanged() {
+        if (true)
+            return;
         // Remove "Account" section header if the personalized sign-in promo is shown.
         boolean isShowingPersonalizedSigninPromo =
                 mSyncPromoPreference.getState() == State.PERSONALIZED_SIGNIN_PROMO;
