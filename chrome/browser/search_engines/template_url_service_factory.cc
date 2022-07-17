@@ -32,62 +32,62 @@
 
 // static
 TemplateURLService* TemplateURLServiceFactory::GetForProfile(Profile* profile) {
-  return static_cast<TemplateURLService*>(
-      GetInstance()->GetServiceForBrowserContext(profile, true));
+    return static_cast<TemplateURLService*>(
+               GetInstance()->GetServiceForBrowserContext(profile, true));
 }
 
 // static
 TemplateURLServiceFactory* TemplateURLServiceFactory::GetInstance() {
-  return base::Singleton<TemplateURLServiceFactory>::get();
+    return base::Singleton<TemplateURLServiceFactory>::get();
 }
 
 // static
 std::unique_ptr<KeyedService> TemplateURLServiceFactory::BuildInstanceFor(
     content::BrowserContext* context) {
-  base::RepeatingClosure dsp_change_callback;
+    base::RepeatingClosure dsp_change_callback;
 #if BUILDFLAG(ENABLE_RLZ)
-  dsp_change_callback = base::BindRepeating(
-      base::IgnoreResult(&rlz::RLZTracker::RecordProductEvent), rlz_lib::CHROME,
-      rlz::RLZTracker::ChromeOmnibox(), rlz_lib::SET_TO_GOOGLE);
+    dsp_change_callback = base::BindRepeating(
+                              base::IgnoreResult(&rlz::RLZTracker::RecordProductEvent), rlz_lib::CHROME,
+                              rlz::RLZTracker::ChromeOmnibox(), rlz_lib::SET_TO_GOOGLE);
 #endif
-  Profile* profile = static_cast<Profile*>(context);
-  return std::make_unique<TemplateURLService>(
-      profile->GetPrefs(), std::make_unique<UIThreadSearchTermsData>(),
-      WebDataServiceFactory::GetKeywordWebDataForProfile(
-          profile, ServiceAccessType::EXPLICIT_ACCESS),
-      std::unique_ptr<TemplateURLServiceClient>(
-          new ChromeTemplateURLServiceClient(
-              HistoryServiceFactory::GetForProfile(
-                  profile, ServiceAccessType::EXPLICIT_ACCESS))),
-      dsp_change_callback, context);
+    Profile* profile = static_cast<Profile*>(context);
+    return std::make_unique<TemplateURLService>(
+               profile->GetPrefs(), std::make_unique<UIThreadSearchTermsData>(),
+               WebDataServiceFactory::GetKeywordWebDataForProfile(
+                   profile, ServiceAccessType::EXPLICIT_ACCESS),
+               std::unique_ptr<TemplateURLServiceClient>(
+                   new ChromeTemplateURLServiceClient(
+                       HistoryServiceFactory::GetForProfile(
+                           profile, ServiceAccessType::EXPLICIT_ACCESS))),
+               dsp_change_callback, context);
 }
 
 TemplateURLServiceFactory::TemplateURLServiceFactory()
     : BrowserContextKeyedServiceFactory(
-        "TemplateURLServiceFactory",
-        BrowserContextDependencyManager::GetInstance()) {
-  DependsOn(HistoryServiceFactory::GetInstance());
-  DependsOn(WebDataServiceFactory::GetInstance());
+          "TemplateURLServiceFactory",
+          BrowserContextDependencyManager::GetInstance()) {
+    DependsOn(HistoryServiceFactory::GetInstance());
+    DependsOn(WebDataServiceFactory::GetInstance());
 }
 
 TemplateURLServiceFactory::~TemplateURLServiceFactory() {}
 
 KeyedService* TemplateURLServiceFactory::BuildServiceInstanceFor(
     content::BrowserContext* profile) const {
-  return BuildInstanceFor(static_cast<Profile*>(profile)).release();
+    return BuildInstanceFor(static_cast<Profile*>(profile)).release();
 }
 
 void TemplateURLServiceFactory::RegisterProfilePrefs(
     user_prefs::PrefRegistrySyncable* registry) {
-  DefaultSearchManager::RegisterProfilePrefs(registry);
-  TemplateURLService::RegisterProfilePrefs(registry);
+    DefaultSearchManager::RegisterProfilePrefs(registry);
+    TemplateURLService::RegisterProfilePrefs(registry);
 }
 
 content::BrowserContext* TemplateURLServiceFactory::GetBrowserContextToUse(
     content::BrowserContext* context) const {
-  return chrome::GetBrowserContextRedirectedInIncognito(context);
+    return chrome::GetBrowserContextRedirectedInIncognito(context);
 }
 
 bool TemplateURLServiceFactory::ServiceIsNULLWhileTesting() const {
-  return true;
+    return true;
 }

@@ -22,17 +22,17 @@ class SearchURLFetcher;
 
 // Class for creating a SearchURLFetcher.
 class SearchURLFetcherFactory {
- public:
-  explicit SearchURLFetcherFactory(
-      scoped_refptr<network::SharedURLLoaderFactory> url_loader_factory, PrefService* prefs, TemplateURLService* template_url_service);
-  virtual ~SearchURLFetcherFactory();
-  virtual SearchURLFetcher* CreateSearchURLFetcher() const;
+public:
+    explicit SearchURLFetcherFactory(
+        scoped_refptr<network::SharedURLLoaderFactory> url_loader_factory, PrefService* prefs, TemplateURLService* template_url_service);
+    virtual ~SearchURLFetcherFactory();
+    virtual SearchURLFetcher* CreateSearchURLFetcher() const;
 
- private:
-  PrefService* prefs_;
-  TemplateURLService* template_url_service_;
-  friend class TestSearchURLFetcherFactory;
-  scoped_refptr<network::SharedURLLoaderFactory> url_loader_factory_;
+private:
+    PrefService* prefs_;
+    TemplateURLService* template_url_service_;
+    friend class TestSearchURLFetcherFactory;
+    scoped_refptr<network::SharedURLLoaderFactory> url_loader_factory_;
 };
 
 // This class loads a URL, and notifies the caller when the operation
@@ -40,33 +40,35 @@ class SearchURLFetcherFactory {
 class SearchURLFetcher
     : public net::NetworkChangeNotifier::NetworkChangeObserver
 {
- public:
-  explicit SearchURLFetcher(
-      scoped_refptr<network::SharedURLLoaderFactory> url_loader_factory, PrefService* prefs, TemplateURLService* template_url_service);
-  virtual ~SearchURLFetcher();
+public:
+    explicit SearchURLFetcher(
+        scoped_refptr<network::SharedURLLoaderFactory> url_loader_factory, PrefService* prefs, TemplateURLService* template_url_service);
+    virtual ~SearchURLFetcher();
 
-  virtual void FetchURL();
+    virtual void FetchURL();
 
-  SearchURLFetcher(const SearchURLFetcher&) = delete;
-  SearchURLFetcher& operator=(const SearchURLFetcher&) = delete;
+    SearchURLFetcher(const SearchURLFetcher&) = delete;
+    SearchURLFetcher& operator=(const SearchURLFetcher&) = delete;
 
- protected:
-  virtual std::unique_ptr<network::SimpleURLLoader> CreateURLFetcher();
+protected:
+    virtual std::unique_ptr<network::SimpleURLLoader> CreateURLFetcher();
 
- private:
-  PrefService* prefs_;
-  TemplateURLService* template_url_service_;
-  int search_version_;
-  bool already_loaded_;    // True if we've already loaded a URL once this run;
-                           // we won't load again until after a restart.
-  int search_version() const { return search_version_; }
+private:
+    PrefService* prefs_;
+    TemplateURLService* template_url_service_;
+    int search_version_;
+    bool already_loaded_;    // True if we've already loaded a URL once this run;
+    // we won't load again until after a restart.
+    int search_version() const {
+        return search_version_;
+    }
 
-  void OnURLLoadComplete(std::unique_ptr<std::string> response_body);
-  void OnNetworkChanged(net::NetworkChangeNotifier::ConnectionType type);
+    void OnURLLoadComplete(std::unique_ptr<std::string> response_body);
+    void OnNetworkChanged(net::NetworkChangeNotifier::ConnectionType type);
 
-  static const char kSearchDomainCheckURL[];
-  std::unique_ptr<network::SimpleURLLoader> url_loader_;
-  scoped_refptr<network::SharedURLLoaderFactory> url_loader_factory_;
+    static const char kSearchDomainCheckURL[];
+    std::unique_ptr<network::SimpleURLLoader> url_loader_;
+    scoped_refptr<network::SharedURLLoaderFactory> url_loader_factory_;
 };
 
 #endif  // COMPONENTS_SEARCH_CORE_DISTILLER_URL_FETCHER_H_

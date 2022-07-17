@@ -51,7 +51,7 @@ bool ShouldAssignURLToInstantRenderer(const GURL& url, Profile* profile);
 
 // Returns true if the Instant |site_url| should use process per site.
 bool ShouldUseProcessPerSiteForInstantSiteURL(const GURL& site_url,
-                                              Profile* profile);
+        Profile* profile);
 
 // Transforms the input |url| into its "effective URL". |url| must be an
 // Instant URL, i.e. ShouldAssignURLToInstantRenderer must return true. The

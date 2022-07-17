@@ -35,16 +35,16 @@ DownloadDialogResult::~DownloadDialogResult() = default;
 // -----------------------------------------------------------------------------
 // DownloadDialogBridge.
 DownloadDialogBridge::DownloadDialogBridge() : is_dialog_showing_(false) {
-  JNIEnv* env = base::android::AttachCurrentThread();
-  java_obj_.Reset(env, Java_DownloadDialogBridge_create(
-                           env, reinterpret_cast<intptr_t>(this))
-                           .obj());
-  DCHECK(!java_obj_.is_null());
+    JNIEnv* env = base::android::AttachCurrentThread();
+    java_obj_.Reset(env, Java_DownloadDialogBridge_create(
+                        env, reinterpret_cast<intptr_t>(this))
+                    .obj());
+    DCHECK(!java_obj_.is_null());
 }
 
 DownloadDialogBridge::~DownloadDialogBridge() {
-  JNIEnv* env = base::android::AttachCurrentThread();
-  Java_DownloadDialogBridge_destroy(env, java_obj_);
+    JNIEnv* env = base::android::AttachCurrentThread();
+    Java_DownloadDialogBridge_destroy(env, java_obj_);
 }
 
 void DownloadDialogBridge::ShowDialog(
@@ -58,49 +58,49 @@ void DownloadDialogBridge::ShowDialog(
     bool is_incognito,
     DialogCallback dialog_callback,
     download::DownloadItem* download) {
-  if (!native_window)
-    return;
+    if (!native_window)
+        return;
 
-  UMA_HISTOGRAM_ENUMERATION("MobileDownload.Location.Dialog.Type", dialog_type);
+    UMA_HISTOGRAM_ENUMERATION("MobileDownload.Location.Dialog.Type", dialog_type);
 
-  dialog_callback_ = std::move(dialog_callback);
+    dialog_callback_ = std::move(dialog_callback);
 
-  // This shouldn't happen, but if it does, cancel download.
-  if (dialog_type == DownloadLocationDialogType::NO_DIALOG) {
-    NOTREACHED();
-    DownloadDialogResult dialog_result;
-    dialog_result.location_result = DownloadLocationDialogResult::USER_CANCELED;
-    CompleteSelection(std::move(dialog_result));
-    return;
-  }
+    // This shouldn't happen, but if it does, cancel download.
+    if (dialog_type == DownloadLocationDialogType::NO_DIALOG) {
+        NOTREACHED();
+        DownloadDialogResult dialog_result;
+        dialog_result.location_result = DownloadLocationDialogResult::USER_CANCELED;
+        CompleteSelection(std::move(dialog_result));
+        return;
+    }
 
-  // If dialog is showing, run the callback to continue without confirmation.
-  if (is_dialog_showing_) {
-    DownloadDialogResult dialog_result;
-    dialog_result.location_result =
-        DownloadLocationDialogResult::DUPLICATE_DIALOG;
-    dialog_result.file_path = suggested_path;
-    CompleteSelection(std::move(dialog_result));
-    return;
-  }
+    // If dialog is showing, run the callback to continue without confirmation.
+    if (is_dialog_showing_) {
+        DownloadDialogResult dialog_result;
+        dialog_result.location_result =
+            DownloadLocationDialogResult::DUPLICATE_DIALOG;
+        dialog_result.file_path = suggested_path;
+        CompleteSelection(std::move(dialog_result));
+        return;
+    }
 
-  is_dialog_showing_ = true;
+    is_dialog_showing_ = true;
 
-  std::string url_to_download = "";
-  if (download && !(download->GetURL().is_empty()))
-      url_to_download = download->GetURL().spec();
+    std::string url_to_download = "";
+    if (download && !(download->GetURL().is_empty()))
+        url_to_download = download->GetURL().spec();
 
-  JNIEnv* env = base::android::AttachCurrentThread();
-  Java_DownloadDialogBridge_showDialog(
-      env, java_obj_, native_window->GetJavaObject(),
-      static_cast<long>(total_bytes), static_cast<int>(connection_type),
-      static_cast<int>(dialog_type),
-      base::android::ConvertUTF8ToJavaString(env,
-                                             suggested_path.AsUTF8Unsafe()),
-      supports_later_dialog, is_incognito,
-      base::android::ConvertUTF8ToJavaString(env,
-                                             url_to_download)
-  );
+    JNIEnv* env = base::android::AttachCurrentThread();
+    Java_DownloadDialogBridge_showDialog(
+        env, java_obj_, native_window->GetJavaObject(),
+        static_cast<long>(total_bytes), static_cast<int>(connection_type),
+        static_cast<int>(dialog_type),
+        base::android::ConvertUTF8ToJavaString(env,
+                suggested_path.AsUTF8Unsafe()),
+        supports_later_dialog, is_incognito,
+        base::android::ConvertUTF8ToJavaString(env,
+                url_to_download)
+    );
 }
 
 void DownloadDialogBridge::OnComplete(
@@ -109,104 +109,104 @@ void DownloadDialogBridge::OnComplete(
     const base::android::JavaParamRef<jstring>& returned_path,
     jboolean on_wifi,
     jlong start_time) {
-  DownloadDialogResult dialog_result;
-  dialog_result.location_result = DownloadLocationDialogResult::USER_CONFIRMED;
-  dialog_result.file_path = base::FilePath(
-      base::android::ConvertJavaStringToUTF8(env, returned_path));
+    DownloadDialogResult dialog_result;
+    dialog_result.location_result = DownloadLocationDialogResult::USER_CONFIRMED;
+    dialog_result.file_path = base::FilePath(
+                                  base::android::ConvertJavaStringToUTF8(env, returned_path));
 
-  if (on_wifi) {
-    dialog_result.download_schedule =
-        download::DownloadSchedule(true /*only_on_wifi*/, absl::nullopt);
-  }
-  if (start_time > 0) {
-    dialog_result.download_schedule = download::DownloadSchedule(
-        false /*only_on_wifi*/, base::Time::FromJavaTime(start_time));
-  }
+    if (on_wifi) {
+        dialog_result.download_schedule =
+            download::DownloadSchedule(true /*only_on_wifi*/, absl::nullopt);
+    }
+    if (start_time > 0) {
+        dialog_result.download_schedule = download::DownloadSchedule(
+                                              false /*only_on_wifi*/, base::Time::FromJavaTime(start_time));
+    }
 
-  CompleteSelection(std::move(dialog_result));
-  is_dialog_showing_ = false;
+    CompleteSelection(std::move(dialog_result));
+    is_dialog_showing_ = false;
 }
 
 void DownloadDialogBridge::OnCanceled(
     JNIEnv* env,
     const base::android::JavaParamRef<jobject>& obj) {
-  if (dialog_callback_) {
-    DownloadDialogResult dialog_result;
-    dialog_result.location_result = DownloadLocationDialogResult::USER_CANCELED;
-    CompleteSelection(std::move(dialog_result));
-  }
+    if (dialog_callback_) {
+        DownloadDialogResult dialog_result;
+        dialog_result.location_result = DownloadLocationDialogResult::USER_CANCELED;
+        CompleteSelection(std::move(dialog_result));
+    }
 
-  is_dialog_showing_ = false;
+    is_dialog_showing_ = false;
 }
 
 void DownloadDialogBridge::CompleteSelection(DownloadDialogResult result) {
-  if (!dialog_callback_)
-    return;
+    if (!dialog_callback_)
+        return;
 
-  UMA_HISTOGRAM_ENUMERATION("MobileDownload.Location.Dialog.Result",
-                            result.location_result);
-  std::move(dialog_callback_).Run(std::move(result));
+    UMA_HISTOGRAM_ENUMERATION("MobileDownload.Location.Dialog.Result",
+                              result.location_result);
+    std::move(dialog_callback_).Run(std::move(result));
 }
 
 // static
 base::android::ScopedJavaLocalRef<jstring>
 JNI_DownloadDialogBridge_GetDownloadDefaultDirectory(JNIEnv* env) {
-  PrefService* pref_service =
-      ProfileManager::GetActiveUserProfile()->GetOriginalProfile()->GetPrefs();
+    PrefService* pref_service =
+        ProfileManager::GetActiveUserProfile()->GetOriginalProfile()->GetPrefs();
 
-  return base::android::ConvertUTF8ToJavaString(
-      env, pref_service->GetString(prefs::kDownloadDefaultDirectory));
+    return base::android::ConvertUTF8ToJavaString(
+               env, pref_service->GetString(prefs::kDownloadDefaultDirectory));
 }
 
 // static
 void JNI_DownloadDialogBridge_SetDownloadAndSaveFileDefaultDirectory(
     JNIEnv* env,
     const base::android::JavaParamRef<jstring>& directory) {
-  PrefService* pref_service =
-      ProfileManager::GetActiveUserProfile()->GetOriginalProfile()->GetPrefs();
+    PrefService* pref_service =
+        ProfileManager::GetActiveUserProfile()->GetOriginalProfile()->GetPrefs();
 
-  base::FilePath path(base::android::ConvertJavaStringToUTF8(env, directory));
-  pref_service->SetFilePath(prefs::kDownloadDefaultDirectory, path);
-  pref_service->SetFilePath(prefs::kSaveFileDefaultDirectory, path);
+    base::FilePath path(base::android::ConvertJavaStringToUTF8(env, directory));
+    pref_service->SetFilePath(prefs::kDownloadDefaultDirectory, path);
+    pref_service->SetFilePath(prefs::kSaveFileDefaultDirectory, path);
 }
 
 // static
 jboolean JNI_DownloadDialogBridge_IsDataReductionProxyEnabled(JNIEnv* env) {
-  auto* data_reduction_settings =
-      DataReductionProxyChromeSettingsFactory::GetForBrowserContext(
-          ProfileManager::GetActiveUserProfile());
-  return data_reduction_settings->IsDataReductionProxyEnabled();
+    auto* data_reduction_settings =
+        DataReductionProxyChromeSettingsFactory::GetForBrowserContext(
+            ProfileManager::GetActiveUserProfile());
+    return data_reduction_settings->IsDataReductionProxyEnabled();
 }
 
 // static
 jlong JNI_DownloadDialogBridge_GetDownloadLaterMinFileSize(JNIEnv* env) {
-  return DownloadDialogBridge::GetDownloadLaterMinFileSize();
+    return DownloadDialogBridge::GetDownloadLaterMinFileSize();
 }
 
 // static
 jboolean JNI_DownloadDialogBridge_ShouldShowDateTimePicker(JNIEnv* env) {
-  return DownloadDialogBridge::ShouldShowDateTimePicker();
+    return DownloadDialogBridge::ShouldShowDateTimePicker();
 }
 
 jboolean JNI_DownloadDialogBridge_IsLocationDialogManaged(JNIEnv* env) {
-  PrefService* pref_service =
-      ProfileManager::GetActiveUserProfile()->GetOriginalProfile()->GetPrefs();
+    PrefService* pref_service =
+        ProfileManager::GetActiveUserProfile()->GetOriginalProfile()->GetPrefs();
 
-  return pref_service->IsManagedPreference(prefs::kPromptForDownload);
+    return pref_service->IsManagedPreference(prefs::kPromptForDownload);
 }
 
 // static
 long DownloadDialogBridge::GetDownloadLaterMinFileSize() {
-  return base::GetFieldTrialParamByFeatureAsInt(
-      download::features::kDownloadLater,
-      download::features::kDownloadLaterMinFileSizeKb,
-      kDownloadLaterDefaultMinFileSizeKb);
+    return base::GetFieldTrialParamByFeatureAsInt(
+               download::features::kDownloadLater,
+               download::features::kDownloadLaterMinFileSizeKb,
+               kDownloadLaterDefaultMinFileSizeKb);
 }
 
 // static
 bool DownloadDialogBridge::ShouldShowDateTimePicker() {
-  return base::GetFieldTrialParamByFeatureAsBool(
-      download::features::kDownloadLater,
-      download::features::kDownloadLaterShowDateTimePicker,
-      /*default_value=*/true);
+    return base::GetFieldTrialParamByFeatureAsBool(
+               download::features::kDownloadLater,
+               download::features::kDownloadLaterShowDateTimePicker,
+               /*default_value=*/true);
 }

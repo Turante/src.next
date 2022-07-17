@@ -17,22 +17,22 @@
 
 // static
 InMemoryURLIndex* InMemoryURLIndexFactory::GetForProfile(Profile* profile) {
-  return static_cast<InMemoryURLIndex*>(
-      GetInstance()->GetServiceForBrowserContext(profile, true));
+    return static_cast<InMemoryURLIndex*>(
+               GetInstance()->GetServiceForBrowserContext(profile, true));
 }
 
 // static
 InMemoryURLIndexFactory* InMemoryURLIndexFactory::GetInstance() {
-  return base::Singleton<InMemoryURLIndexFactory>::get();
+    return base::Singleton<InMemoryURLIndexFactory>::get();
 }
 
 InMemoryURLIndexFactory::InMemoryURLIndexFactory()
     : BrowserContextKeyedServiceFactory(
           "InMemoryURLIndex",
           BrowserContextDependencyManager::GetInstance()) {
-  DependsOn(BookmarkModelFactory::GetInstance());
-  DependsOn(HistoryServiceFactory::GetInstance());
-  DependsOn(TemplateURLServiceFactory::GetInstance());
+    DependsOn(BookmarkModelFactory::GetInstance());
+    DependsOn(HistoryServiceFactory::GetInstance());
+    DependsOn(TemplateURLServiceFactory::GetInstance());
 }
 
 InMemoryURLIndexFactory::~InMemoryURLIndexFactory() {
@@ -40,26 +40,26 @@ InMemoryURLIndexFactory::~InMemoryURLIndexFactory() {
 
 KeyedService* InMemoryURLIndexFactory::BuildServiceInstanceFor(
     content::BrowserContext* context) const {
-  // Do not force creation of the HistoryService if saving history is disabled.
-  Profile* profile = Profile::FromBrowserContext(context);
-  SchemeSet chrome_schemes_to_whitelist;
-  chrome_schemes_to_whitelist.insert(content::kChromeUIScheme);
-  chrome_schemes_to_whitelist.insert("kiwi");
-  InMemoryURLIndex* in_memory_url_index =
-      new InMemoryURLIndex(BookmarkModelFactory::GetForBrowserContext(profile),
-                           HistoryServiceFactory::GetForProfile(
-                               profile, ServiceAccessType::IMPLICIT_ACCESS),
-                           TemplateURLServiceFactory::GetForProfile(profile),
-                           profile->GetPath(), chrome_schemes_to_whitelist);
-  in_memory_url_index->Init();
-  return in_memory_url_index;
+    // Do not force creation of the HistoryService if saving history is disabled.
+    Profile* profile = Profile::FromBrowserContext(context);
+    SchemeSet chrome_schemes_to_whitelist;
+    chrome_schemes_to_whitelist.insert(content::kChromeUIScheme);
+    chrome_schemes_to_whitelist.insert("kiwi");
+    InMemoryURLIndex* in_memory_url_index =
+        new InMemoryURLIndex(BookmarkModelFactory::GetForBrowserContext(profile),
+                             HistoryServiceFactory::GetForProfile(
+                                 profile, ServiceAccessType::IMPLICIT_ACCESS),
+                             TemplateURLServiceFactory::GetForProfile(profile),
+                             profile->GetPath(), chrome_schemes_to_whitelist);
+    in_memory_url_index->Init();
+    return in_memory_url_index;
 }
 
 content::BrowserContext* InMemoryURLIndexFactory::GetBrowserContextToUse(
     content::BrowserContext* context) const {
-  return chrome::GetBrowserContextRedirectedInIncognito(context);
+    return chrome::GetBrowserContextRedirectedInIncognito(context);
 }
 
 bool InMemoryURLIndexFactory::ServiceIsNULLWhileTesting() const {
-  return true;
+    return true;
 }

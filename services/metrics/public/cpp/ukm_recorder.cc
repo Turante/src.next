@@ -21,58 +21,58 @@ UkmRecorder::~UkmRecorder() = default;
 
 // static
 UkmRecorder* UkmRecorder::Get() {
-  // Note that SourceUrlRecorderWebContentsObserver assumes that
-  // DelegatingUkmRecorder::Get() is the canonical UkmRecorder instance. If this
-  // changes, SourceUrlRecorderWebContentsObserver should be updated to match.
-  return DelegatingUkmRecorder::Get();
+    // Note that SourceUrlRecorderWebContentsObserver assumes that
+    // DelegatingUkmRecorder::Get() is the canonical UkmRecorder instance. If this
+    // changes, SourceUrlRecorderWebContentsObserver should be updated to match.
+    return DelegatingUkmRecorder::Get();
 }
 
 // static
 ukm::SourceId UkmRecorder::GetNewSourceID() {
-  return AssignNewSourceId();
+    return AssignNewSourceId();
 }
 
 // static
 ukm::SourceId UkmRecorder::GetSourceIdForPaymentAppFromScope(
     const GURL& service_worker_scope) {
-  ukm::SourceId source_id = ukm::SourceIdObj::FromOtherId(
-                                GetNewSourceID(), SourceIdType::PAYMENT_APP_ID)
-                                .ToInt64();
-  ukm::UkmRecorder::Get()->UpdateSourceURL(source_id, service_worker_scope);
-  return source_id;
+    ukm::SourceId source_id = ukm::SourceIdObj::FromOtherId(
+                                  GetNewSourceID(), SourceIdType::PAYMENT_APP_ID)
+                              .ToInt64();
+    ukm::UkmRecorder::Get()->UpdateSourceURL(source_id, service_worker_scope);
+    return source_id;
 }
 
 // static
 ukm::SourceId UkmRecorder::GetSourceIdForWebApkManifestUrl(
     const GURL& manifest_url) {
-  ukm::SourceId source_id =
-      ukm::SourceIdObj::FromOtherId(GetNewSourceID(), SourceIdType::WEBAPK_ID)
-          .ToInt64();
-  ukm::UkmRecorder* ukm_recorder = ukm::UkmRecorder::Get();
-  ukm_recorder->UpdateSourceURL(source_id, manifest_url);
-  return source_id;
+    ukm::SourceId source_id =
+        ukm::SourceIdObj::FromOtherId(GetNewSourceID(), SourceIdType::WEBAPK_ID)
+        .ToInt64();
+    ukm::UkmRecorder* ukm_recorder = ukm::UkmRecorder::Get();
+    ukm_recorder->UpdateSourceURL(source_id, manifest_url);
+    return source_id;
 }
 
 // static
 ukm::SourceId UkmRecorder::GetSourceIdForDesktopWebAppStartUrl(
     const GURL& start_url) {
-  ukm::SourceId source_id =
-      ukm::SourceIdObj::FromOtherId(GetNewSourceID(),
-                                    SourceIdType::DESKTOP_WEB_APP_ID)
-          .ToInt64();
-  ukm::UkmRecorder* ukm_recorder = ukm::UkmRecorder::Get();
-  ukm_recorder->UpdateSourceURL(source_id, start_url);
-  return source_id;
+    ukm::SourceId source_id =
+        ukm::SourceIdObj::FromOtherId(GetNewSourceID(),
+                                      SourceIdType::DESKTOP_WEB_APP_ID)
+        .ToInt64();
+    ukm::UkmRecorder* ukm_recorder = ukm::UkmRecorder::Get();
+    ukm_recorder->UpdateSourceURL(source_id, start_url);
+    return source_id;
 }
 
 void UkmRecorder::RecordOtherURL(ukm::SourceIdObj source_id, const GURL& url) {
-  UpdateSourceURL(source_id.ToInt64(), url);
+    UpdateSourceURL(source_id.ToInt64(), url);
 }
 
 void UkmRecorder::RecordAppURL(ukm::SourceIdObj source_id,
                                const GURL& url,
                                const AppType app_type) {
-  UpdateAppURL(source_id.ToInt64(), url, app_type);
+    UpdateAppURL(source_id.ToInt64(), url, app_type);
 }
 
 }  // namespace ukm

@@ -63,260 +63,260 @@ InstantService::InstantService(Profile* profile)
       pref_service_(profile_->GetPrefs()),
       native_theme_(ui::NativeTheme::GetInstanceForNativeUi()),
       background_updated_timestamp_(base::TimeTicks::Now()) {
-  // The initialization below depends on a typical set of browser threads. Skip
-  // it if we are running in a unit test without the full suite.
-  if (!content::BrowserThread::CurrentlyOn(content::BrowserThread::UI))
-    return;
+    // The initialization below depends on a typical set of browser threads. Skip
+    // it if we are running in a unit test without the full suite.
+    if (!content::BrowserThread::CurrentlyOn(content::BrowserThread::UI))
+        return;
 
-  registrar_.Add(this,
-                 content::NOTIFICATION_RENDERER_PROCESS_TERMINATED,
-                 content::NotificationService::AllSources());
+    registrar_.Add(this,
+                   content::NOTIFICATION_RENDERER_PROCESS_TERMINATED,
+                   content::NotificationService::AllSources());
 
-  most_visited_sites_ = ChromeMostVisitedSitesFactory::NewForProfile(profile_);
-  if (most_visited_sites_) {
-    most_visited_sites_->EnableCustomLinks(false);
-    most_visited_sites_->AddMostVisitedURLsObserver(
-        this, ntp_tiles::kMaxNumMostVisited);
-  }
+    most_visited_sites_ = ChromeMostVisitedSitesFactory::NewForProfile(profile_);
+    if (most_visited_sites_) {
+        most_visited_sites_->EnableCustomLinks(false);
+        most_visited_sites_->AddMostVisitedURLsObserver(
+            this, ntp_tiles::kMaxNumMostVisited);
+    }
 
-  // Listen for theme installation.
-  ThemeServiceFactory::GetForProfile(profile_)->AddObserver(this);
+    // Listen for theme installation.
+    ThemeServiceFactory::GetForProfile(profile_)->AddObserver(this);
 
-  // TODO(crbug.com/1192394): multiple WebUI pages depend on the theme source
-  // without adding it themselves. This is not causing an issue because the
-  // theme source is being added here. The source should be added where it is
-  // used and then the following can be removed.
-  content::URLDataSource::Add(profile_,
-                              std::make_unique<ThemeSource>(profile_));
+    // TODO(crbug.com/1192394): multiple WebUI pages depend on the theme source
+    // without adding it themselves. This is not causing an issue because the
+    // theme source is being added here. The source should be added where it is
+    // used and then the following can be removed.
+    content::URLDataSource::Add(profile_,
+                                std::make_unique<ThemeSource>(profile_));
 
-  // Set up the data sources that Instant uses on the NTP.
-  content::URLDataSource::Add(
-      profile_, std::make_unique<FaviconSource>(
-                    profile_, chrome::FaviconUrlFormat::kFaviconLegacy));
-  content::URLDataSource::Add(profile_,
-                              std::make_unique<MostVisitedIframeSource>());
-  content::URLDataSource::Add(profile_,
-                              std::make_unique<NewTabPageSource>());
+    // Set up the data sources that Instant uses on the NTP.
+    content::URLDataSource::Add(
+        profile_, std::make_unique<FaviconSource>(
+            profile_, chrome::FaviconUrlFormat::kFaviconLegacy));
+    content::URLDataSource::Add(profile_,
+                                std::make_unique<MostVisitedIframeSource>());
+    content::URLDataSource::Add(profile_,
+                                std::make_unique<NewTabPageSource>());
 
-  theme_observation_.Observe(native_theme_.get());
+    theme_observation_.Observe(native_theme_.get());
 }
 
 InstantService::~InstantService() = default;
 
 void InstantService::AddInstantProcess(int process_id) {
-  process_ids_.insert(process_id);
+    process_ids_.insert(process_id);
 }
 
 bool InstantService::IsInstantProcess(int process_id) const {
-  return process_ids_.find(process_id) != process_ids_.end();
+    return process_ids_.find(process_id) != process_ids_.end();
 }
 
 void InstantService::AddObserver(InstantServiceObserver* observer) {
-  observers_.AddObserver(observer);
+    observers_.AddObserver(observer);
 }
 
 void InstantService::RemoveObserver(InstantServiceObserver* observer) {
-  observers_.RemoveObserver(observer);
+    observers_.RemoveObserver(observer);
 }
 
 void InstantService::OnNewTabPageOpened() {
-  LOG(INFO) << "[Kiwi] InstantService::OnNewTabPageOpened";
-  if (most_visited_sites_) {
-    LOG(INFO) << "[Kiwi] InstantService::OnNewTabPageOpened - most_visited_sites_";
-    most_visited_sites_->Refresh();
-    most_visited_sites_->RefreshTiles();
-  }
+    LOG(INFO) << "[Kiwi] InstantService::OnNewTabPageOpened";
+    if (most_visited_sites_) {
+        LOG(INFO) << "[Kiwi] InstantService::OnNewTabPageOpened - most_visited_sites_";
+        most_visited_sites_->Refresh();
+        most_visited_sites_->RefreshTiles();
+    }
 }
 
 void InstantService::OnThemeChanged() {
-  theme_ = nullptr;
-  UpdateNtpTheme();
+    theme_ = nullptr;
+    UpdateNtpTheme();
 }
 
 void InstantService::DeleteMostVisitedItem(const GURL& url) {
-  if (most_visited_sites_) {
-    most_visited_sites_->AddOrRemoveBlockedUrl(url, true);
-  }
+    if (most_visited_sites_) {
+        most_visited_sites_->AddOrRemoveBlockedUrl(url, true);
+    }
 }
 
 void InstantService::UndoMostVisitedDeletion(const GURL& url) {
-  if (most_visited_sites_) {
-    most_visited_sites_->AddOrRemoveBlockedUrl(url, false);
-  }
+    if (most_visited_sites_) {
+        most_visited_sites_->AddOrRemoveBlockedUrl(url, false);
+    }
 }
 
 void InstantService::UndoAllMostVisitedDeletions() {
-  if (most_visited_sites_) {
-    most_visited_sites_->ClearBlockedUrls();
-  }
+    if (most_visited_sites_) {
+        most_visited_sites_->ClearBlockedUrls();
+    }
 }
 
 void InstantService::UpdateNtpTheme() {
-  SetNtpElementsNtpTheme();
+    SetNtpElementsNtpTheme();
 
-  NotifyAboutNtpTheme();
+    NotifyAboutNtpTheme();
 }
 
 void InstantService::UpdateMostVisitedInfo() {
-  NotifyAboutMostVisitedInfo();
+    NotifyAboutMostVisitedInfo();
 }
 
 NtpTheme* InstantService::GetInitializedNtpTheme() {
-  if (!theme_)
-    BuildNtpTheme();
-  return theme_.get();
+    if (!theme_)
+        BuildNtpTheme();
+    return theme_.get();
 }
 
 void InstantService::SetNativeThemeForTesting(ui::NativeTheme* theme) {
-  theme_observation_.Reset();
-  native_theme_ = theme;
-  theme_observation_.Observe(native_theme_.get());
+    theme_observation_.Reset();
+    native_theme_ = theme;
+    theme_observation_.Observe(native_theme_.get());
 }
 
 void InstantService::Shutdown() {
-  process_ids_.clear();
+    process_ids_.clear();
 
-  if (most_visited_sites_) {
-    most_visited_sites_.reset();
-  }
+    if (most_visited_sites_) {
+        most_visited_sites_.reset();
+    }
 
-  ThemeServiceFactory::GetForProfile(profile_)->RemoveObserver(this);
+    ThemeServiceFactory::GetForProfile(profile_)->RemoveObserver(this);
 }
 
 void InstantService::Observe(int type,
                              const content::NotificationSource& source,
                              const content::NotificationDetails& details) {
-  switch (type) {
+    switch (type) {
     case content::NOTIFICATION_RENDERER_PROCESS_TERMINATED: {
-      content::RenderProcessHost* rph =
-          content::Source<content::RenderProcessHost>(source).ptr();
-      Profile* renderer_profile =
-          static_cast<Profile*>(rph->GetBrowserContext());
-      if (profile_ == renderer_profile)
-        OnRendererProcessTerminated(rph->GetID());
-      break;
+        content::RenderProcessHost* rph =
+            content::Source<content::RenderProcessHost>(source).ptr();
+        Profile* renderer_profile =
+            static_cast<Profile*>(rph->GetBrowserContext());
+        if (profile_ == renderer_profile)
+            OnRendererProcessTerminated(rph->GetID());
+        break;
     }
     default:
-      NOTREACHED() << "Unexpected notification type in InstantService.";
-  }
+        NOTREACHED() << "Unexpected notification type in InstantService.";
+    }
 }
 
 void InstantService::OnRendererProcessTerminated(int process_id) {
-  process_ids_.erase(process_id);
+    process_ids_.erase(process_id);
 }
 
 void InstantService::OnNativeThemeUpdated(ui::NativeTheme* observed_theme) {
-  DCHECK_EQ(observed_theme, native_theme_);
-  // Force the theme information to rebuild so the correct using_dark_colors
-  // value is sent to the renderer.
-  BuildNtpTheme();
-  UpdateNtpTheme();
+    DCHECK_EQ(observed_theme, native_theme_);
+    // Force the theme information to rebuild so the correct using_dark_colors
+    // value is sent to the renderer.
+    BuildNtpTheme();
+    UpdateNtpTheme();
 }
 
 void InstantService::OnURLsAvailable(
     const std::map<ntp_tiles::SectionType, ntp_tiles::NTPTilesVector>&
-        sections) {
-  DCHECK(most_visited_sites_);
-  most_visited_info_->items.clear();
-  // Use only personalized tiles for instant service.
-  const ntp_tiles::NTPTilesVector& tiles =
-      sections.at(ntp_tiles::SectionType::PERSONALIZED);
-  LOG(INFO) << "[Kiwi] InstantService::OnURLsAvailable - tiles: " << tiles.size();
-  for (const ntp_tiles::NTPTile& tile : tiles) {
-    InstantMostVisitedItem item;
-    item.url = tile.url;
-    item.title = tile.title;
-    item.favicon = tile.favicon_url;
-    most_visited_info_->items.push_back(item);
-  }
+    sections) {
+    DCHECK(most_visited_sites_);
+    most_visited_info_->items.clear();
+    // Use only personalized tiles for instant service.
+    const ntp_tiles::NTPTilesVector& tiles =
+        sections.at(ntp_tiles::SectionType::PERSONALIZED);
+    LOG(INFO) << "[Kiwi] InstantService::OnURLsAvailable - tiles: " << tiles.size();
+    for (const ntp_tiles::NTPTile& tile : tiles) {
+        InstantMostVisitedItem item;
+        item.url = tile.url;
+        item.title = tile.title;
+        item.favicon = tile.favicon_url;
+        most_visited_info_->items.push_back(item);
+    }
 
-  NotifyAboutMostVisitedInfo();
+    NotifyAboutMostVisitedInfo();
 }
 
 void InstantService::OnIconMadeAvailable(const GURL& site_url) {}
 
 void InstantService::NotifyAboutMostVisitedInfo() {
-  LOG(INFO) << "[Kiwi] InstantService::NotifyAboutMostVisitedInfo";
-  for (InstantServiceObserver& observer : observers_)
-    observer.MostVisitedInfoChanged(*most_visited_info_);
+    LOG(INFO) << "[Kiwi] InstantService::NotifyAboutMostVisitedInfo";
+    for (InstantServiceObserver& observer : observers_)
+        observer.MostVisitedInfoChanged(*most_visited_info_);
 }
 
 void InstantService::NotifyAboutNtpTheme() {
-  for (InstantServiceObserver& observer : observers_)
-    observer.NtpThemeChanged(*theme_);
+    for (InstantServiceObserver& observer : observers_)
+        observer.NtpThemeChanged(*theme_);
 }
 
 void InstantService::BuildNtpTheme() {
-  // Get theme information from theme service.
-  theme_ = std::make_unique<NtpTheme>();
+    // Get theme information from theme service.
+    theme_ = std::make_unique<NtpTheme>();
 
-  // Get if the current theme is the default theme.
-  ThemeService* theme_service = ThemeServiceFactory::GetForProfile(profile_);
-  theme_->using_default_theme = theme_service->UsingDefaultTheme();
+    // Get if the current theme is the default theme.
+    ThemeService* theme_service = ThemeServiceFactory::GetForProfile(profile_);
+    theme_->using_default_theme = theme_service->UsingDefaultTheme();
 
-  // Get theme colors.
-  const ui::ThemeProvider& theme_provider =
-      ThemeService::GetThemeProviderForProfile(profile_);
+    // Get theme colors.
+    const ui::ThemeProvider& theme_provider =
+        ThemeService::GetThemeProviderForProfile(profile_);
 
-  // Set colors.
-  theme_->background_color =
-      theme_provider.GetColor(ThemeProperties::COLOR_NTP_BACKGROUND);
-  theme_->text_color_light =
-      theme_provider.GetColor(ThemeProperties::COLOR_NTP_TEXT_LIGHT);
-  SetNtpElementsNtpTheme();
+    // Set colors.
+    theme_->background_color =
+        theme_provider.GetColor(ThemeProperties::COLOR_NTP_BACKGROUND);
+    theme_->text_color_light =
+        theme_provider.GetColor(ThemeProperties::COLOR_NTP_TEXT_LIGHT);
+    SetNtpElementsNtpTheme();
 
-  if (theme_service->UsingExtensionTheme()) {
-    const extensions::Extension* extension =
-        extensions::ExtensionRegistry::Get(profile_)
+    if (theme_service->UsingExtensionTheme()) {
+        const extensions::Extension* extension =
+            extensions::ExtensionRegistry::Get(profile_)
             ->enabled_extensions()
             .GetByID(theme_service->GetThemeID());
-    if (extension) {
-      theme_->theme_id = theme_service->GetThemeID();
+        if (extension) {
+            theme_->theme_id = theme_service->GetThemeID();
 
-      if (theme_provider.HasCustomImage(IDR_THEME_NTP_BACKGROUND)) {
-        theme_->has_theme_image = true;
+            if (theme_provider.HasCustomImage(IDR_THEME_NTP_BACKGROUND)) {
+                theme_->has_theme_image = true;
 
-        // Set theme background image horizontal alignment.
-        int alignment = theme_provider.GetDisplayProperty(
-            ThemeProperties::NTP_BACKGROUND_ALIGNMENT);
-        if (alignment & ThemeProperties::ALIGN_LEFT)
-          theme_->image_horizontal_alignment = THEME_BKGRND_IMAGE_ALIGN_LEFT;
-        else if (alignment & ThemeProperties::ALIGN_RIGHT)
-          theme_->image_horizontal_alignment = THEME_BKGRND_IMAGE_ALIGN_RIGHT;
-        else
-          theme_->image_horizontal_alignment = THEME_BKGRND_IMAGE_ALIGN_CENTER;
+                // Set theme background image horizontal alignment.
+                int alignment = theme_provider.GetDisplayProperty(
+                                    ThemeProperties::NTP_BACKGROUND_ALIGNMENT);
+                if (alignment & ThemeProperties::ALIGN_LEFT)
+                    theme_->image_horizontal_alignment = THEME_BKGRND_IMAGE_ALIGN_LEFT;
+                else if (alignment & ThemeProperties::ALIGN_RIGHT)
+                    theme_->image_horizontal_alignment = THEME_BKGRND_IMAGE_ALIGN_RIGHT;
+                else
+                    theme_->image_horizontal_alignment = THEME_BKGRND_IMAGE_ALIGN_CENTER;
 
-        // Set theme background image vertical alignment.
-        if (alignment & ThemeProperties::ALIGN_TOP)
-          theme_->image_vertical_alignment = THEME_BKGRND_IMAGE_ALIGN_TOP;
-        else if (alignment & ThemeProperties::ALIGN_BOTTOM)
-          theme_->image_vertical_alignment = THEME_BKGRND_IMAGE_ALIGN_BOTTOM;
-        else
-          theme_->image_vertical_alignment = THEME_BKGRND_IMAGE_ALIGN_CENTER;
+                // Set theme background image vertical alignment.
+                if (alignment & ThemeProperties::ALIGN_TOP)
+                    theme_->image_vertical_alignment = THEME_BKGRND_IMAGE_ALIGN_TOP;
+                else if (alignment & ThemeProperties::ALIGN_BOTTOM)
+                    theme_->image_vertical_alignment = THEME_BKGRND_IMAGE_ALIGN_BOTTOM;
+                else
+                    theme_->image_vertical_alignment = THEME_BKGRND_IMAGE_ALIGN_CENTER;
 
-        // Set theme background image tiling.
-        int tiling = theme_provider.GetDisplayProperty(
-            ThemeProperties::NTP_BACKGROUND_TILING);
-        switch (tiling) {
-          case ThemeProperties::NO_REPEAT:
-            theme_->image_tiling = THEME_BKGRND_IMAGE_NO_REPEAT;
-            break;
-          case ThemeProperties::REPEAT_X:
-            theme_->image_tiling = THEME_BKGRND_IMAGE_REPEAT_X;
-            break;
-          case ThemeProperties::REPEAT_Y:
-            theme_->image_tiling = THEME_BKGRND_IMAGE_REPEAT_Y;
-            break;
-          case ThemeProperties::REPEAT:
-            theme_->image_tiling = THEME_BKGRND_IMAGE_REPEAT;
-            break;
+                // Set theme background image tiling.
+                int tiling = theme_provider.GetDisplayProperty(
+                                 ThemeProperties::NTP_BACKGROUND_TILING);
+                switch (tiling) {
+                case ThemeProperties::NO_REPEAT:
+                    theme_->image_tiling = THEME_BKGRND_IMAGE_NO_REPEAT;
+                    break;
+                case ThemeProperties::REPEAT_X:
+                    theme_->image_tiling = THEME_BKGRND_IMAGE_REPEAT_X;
+                    break;
+                case ThemeProperties::REPEAT_Y:
+                    theme_->image_tiling = THEME_BKGRND_IMAGE_REPEAT_Y;
+                    break;
+                case ThemeProperties::REPEAT:
+                    theme_->image_tiling = THEME_BKGRND_IMAGE_REPEAT;
+                    break;
+                }
+
+                theme_->has_attribution =
+                    theme_provider.HasCustomImage(IDR_THEME_NTP_ATTRIBUTION);
+            }
         }
-
-        theme_->has_attribution =
-            theme_provider.HasCustomImage(IDR_THEME_NTP_ATTRIBUTION);
-      }
     }
-  }
 }
 
 // static
@@ -324,25 +324,25 @@ bool InstantService::ShouldServiceRequest(
     const GURL& url,
     content::BrowserContext* browser_context,
     int render_process_id) {
-  DCHECK_CURRENTLY_ON(content::BrowserThread::UI);
+    DCHECK_CURRENTLY_ON(content::BrowserThread::UI);
 
-  auto* instant_service = InstantServiceFactory::GetForProfile(
-      static_cast<Profile*>(browser_context));
+    auto* instant_service = InstantServiceFactory::GetForProfile(
+                                static_cast<Profile*>(browser_context));
 
-  if (!instant_service)
-    return false;
+    if (!instant_service)
+        return false;
 
-  // The process_id for the navigation request will be -1. If
-  // so, allow this request since it's not going to another renderer.
-  return render_process_id == -1 ||
-         instant_service->IsInstantProcess(render_process_id);
+    // The process_id for the navigation request will be -1. If
+    // so, allow this request since it's not going to another renderer.
+    return render_process_id == -1 ||
+           instant_service->IsInstantProcess(render_process_id);
 }
 
 void InstantService::SetNtpElementsNtpTheme() {
-  NtpTheme* theme = GetInitializedNtpTheme();
-  const ui::ThemeProvider& theme_provider =
-      ThemeService::GetThemeProviderForProfile(profile_);
-  theme->text_color = theme_provider.GetColor(ThemeProperties::COLOR_NTP_TEXT);
-  theme->logo_alternate = theme_provider.GetDisplayProperty(
-                              ThemeProperties::NTP_LOGO_ALTERNATE) == 1;
+    NtpTheme* theme = GetInitializedNtpTheme();
+    const ui::ThemeProvider& theme_provider =
+        ThemeService::GetThemeProviderForProfile(profile_);
+    theme->text_color = theme_provider.GetColor(ThemeProperties::COLOR_NTP_TEXT);
+    theme->logo_alternate = theme_provider.GetDisplayProperty(
+                                ThemeProperties::NTP_LOGO_ALTERNATE) == 1;
 }
