@@ -338,7 +338,7 @@ function add_gnews(is_primary, title, news_time, source, source_logo, link, imag
   innerDiv.innerHTML = '<div style="float: right; height: 128px;"><img src="' + image + '" class="newsImage" onload="this.style.opacity=\'1\';this.style.visibility=\'visible\'" onerror="this.style.visibility=\'hidden\'" /></div>'
   + '<div style="position: relative; left: 10px; font-size: medium">'
   + '<span class="newsAttribution"><img src="' + source_logo + '" onerror="this.style.display=\'none\'" style="max-height: 12px;" />&nbsp;&nbsp;<a style="color: #333" href="' + link + '">' + source + '</a></span>'
-  + '<div class="newsTitle"><a style="color: #333" href="' + link + '">' 
+  + '<div class="newsTitle"><a style="color: #333" href="' + link + '">'
   + title + '</a></div>'
   + '<span class="newsTime">'
   + timeagoInstance.format(creationTime) + '</span></a></div>';
@@ -532,7 +532,7 @@ function render_gnews(answer, start_offset, n)
                   news_time = parseInt(Date.parse(news_time) / 1000);
               if (link)
                   link = link.replace('chrome-search://local-ntp/', 'https://news.google.com/');
-            
+
               if (link && image && title) {
 //                  console.log('Title: ' + title);
                   add_gnews(is_primary, title, news_time, source, source_logo, link, image);

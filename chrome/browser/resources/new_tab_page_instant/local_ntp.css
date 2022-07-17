@@ -986,4 +986,3 @@ input:checked + .toggle::before {
     transform: rotate(360deg);
   }
 }
-
