@@ -11,8 +11,8 @@ import org.chromium.chrome.browser.flags.ChromeFeatureList;
 import org.chromium.chrome.browser.profiles.Profile;
 import org.chromium.chrome.browser.tab.Tab;
 import org.chromium.chrome.browser.toolbar.bottom.BottomControlsCoordinator;
+import org.chromium.chrome.browser.ui.native_page.NativePage;
 import org.chromium.components.embedder_support.util.UrlConstants;
-import org.chromium.components.embedder_support.util.UrlUtilities;
 import org.chromium.components.feature_engagement.EventConstants;
 import org.chromium.components.feature_engagement.Tracker;
 import org.chromium.components.profile_metrics.BrowserProfileType;
@@ -63,6 +63,11 @@ public class ToolbarTabControllerImpl implements ToolbarTabController {
 
         Tab tab = mTabSupplier.get();
         if (tab != null && tab.canGoBack()) {
+            NativePage nativePage = tab.getNativePage();
+            if (nativePage != null) {
+                nativePage.notifyHidingWithBack();
+            }
+
             tab.goBack();
             mOnSuccessRunnable.run();
             return true;
@@ -136,10 +141,6 @@ public class ToolbarTabControllerImpl implements ToolbarTabController {
         if (tab == null || tracker == null) return;
 
         tracker.notifyEvent(EventConstants.HOMEPAGE_BUTTON_CLICKED);
-
-        if (UrlUtilities.isNTPUrl(homepageUrl)) {
-            tracker.notifyEvent(EventConstants.NTP_HOME_BUTTON_CLICKED);
-        }
     }
 
     private void recordHomeButtonUserPerProfileType() {
