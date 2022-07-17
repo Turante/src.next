@@ -19,8 +19,8 @@ namespace content {
 // from there.
 CONTENT_EXPORT extern const char kChromeDevToolsScheme[];
 CONTENT_EXPORT extern const char kChromeErrorScheme[];
-CONTENT_EXPORT extern const char kChromeUIScheme[];  // Used for WebUIs.
-CONTENT_EXPORT extern const char kChromeSearchScheme[];  // Used for WebUIs.
+CONTENT_EXPORT extern const char kChromeUIScheme[];     // Used for WebUIs.
+CONTENT_EXPORT extern const char kChromeSearchScheme[]; // Used for WebUIs.
 CONTENT_EXPORT extern const char kChromeUIUntrustedScheme[];
 CONTENT_EXPORT extern const char kGuestScheme[];
 CONTENT_EXPORT extern const char kViewSourceScheme[];
@@ -63,6 +63,6 @@ CONTENT_EXPORT extern const char kUnreachableWebDataURL[];
 // source process is not allowed access to the initially requested URL.
 CONTENT_EXPORT extern const char kBlockedURL[];
 
-}  // namespace content
+} // namespace content
 
-#endif  // CONTENT_PUBLIC_COMMON_URL_CONSTANTS_H_
+#endif // CONTENT_PUBLIC_COMMON_URL_CONSTANTS_H_

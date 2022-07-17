@@ -52,4 +52,4 @@ const char kUnreachableWebDataURL[] = "chrome-error://chromewebdata/";
 
 const char kBlockedURL[] = "about:blank#blocked";
 
-}  // namespace content
+} // namespace content

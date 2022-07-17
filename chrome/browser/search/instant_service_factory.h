@@ -21,25 +21,25 @@ class Profile;
 // Singleton that owns all InstantServices and associates them with Profiles.
 class InstantServiceFactory : public BrowserContextKeyedServiceFactory {
 public:
-    // Returns the InstantService for |profile|.
-    static InstantService* GetForProfile(Profile* profile);
+  // Returns the InstantService for |profile|.
+  static InstantService *GetForProfile(Profile *profile);
 
-    static InstantServiceFactory* GetInstance();
+  static InstantServiceFactory *GetInstance();
 
-    InstantServiceFactory(const InstantServiceFactory&) = delete;
-    InstantServiceFactory& operator=(const InstantServiceFactory&) = delete;
+  InstantServiceFactory(const InstantServiceFactory &) = delete;
+  InstantServiceFactory &operator=(const InstantServiceFactory &) = delete;
 
 private:
-    friend struct base::DefaultSingletonTraits<InstantServiceFactory>;
+  friend struct base::DefaultSingletonTraits<InstantServiceFactory>;
 
-    InstantServiceFactory();
-    ~InstantServiceFactory() override;
+  InstantServiceFactory();
+  ~InstantServiceFactory() override;
 
-    // Overridden from BrowserContextKeyedServiceFactory:
-    content::BrowserContext* GetBrowserContextToUse(
-        content::BrowserContext* context) const override;
-    KeyedService* BuildServiceInstanceFor(
-        content::BrowserContext* context) const override;
+  // Overridden from BrowserContextKeyedServiceFactory:
+  content::BrowserContext *
+  GetBrowserContextToUse(content::BrowserContext *context) const override;
+  KeyedService *
+  BuildServiceInstanceFor(content::BrowserContext *context) const override;
 };
 
-#endif  // CHROME_BROWSER_SEARCH_INSTANT_SERVICE_FACTORY_H_
+#endif // CHROME_BROWSER_SEARCH_INSTANT_SERVICE_FACTORY_H_

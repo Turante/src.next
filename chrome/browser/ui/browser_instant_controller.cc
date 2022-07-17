@@ -26,62 +26,63 @@
 
 // BrowserInstantController ---------------------------------------------------
 
-BrowserInstantController::BrowserInstantController(Browser* browser)
+BrowserInstantController::BrowserInstantController(Browser *browser)
     : browser_(browser), instant_(profile(), browser_->tab_strip_model()) {
-    TemplateURLService* template_url_service =
-        TemplateURLServiceFactory::GetForProfile(profile());
-    // TemplateURLService can be null in tests.
-    if (template_url_service) {
-        search_engine_base_url_tracker_ =
-            std::make_unique<SearchEngineBaseURLTracker>(
-                template_url_service, std::make_unique<UIThreadSearchTermsData>(),
-                base::BindRepeating(
-                    &BrowserInstantController::OnSearchEngineBaseURLChanged,
-                    base::Unretained(this)));
-    }
+  TemplateURLService *template_url_service =
+      TemplateURLServiceFactory::GetForProfile(profile());
+  // TemplateURLService can be null in tests.
+  if (template_url_service) {
+    search_engine_base_url_tracker_ =
+        std::make_unique<SearchEngineBaseURLTracker>(
+            template_url_service, std::make_unique<UIThreadSearchTermsData>(),
+            base::BindRepeating(
+                &BrowserInstantController::OnSearchEngineBaseURLChanged,
+                base::Unretained(this)));
+  }
 }
 
 BrowserInstantController::~BrowserInstantController() = default;
 
 void BrowserInstantController::OnSearchEngineBaseURLChanged(
     SearchEngineBaseURLTracker::ChangeReason change_reason) {
-    TabStripModel* tab_model = browser_->tab_strip_model();
-    int count = tab_model->count();
-    for (int index = 0; index < count; ++index) {
-        content::WebContents* contents = tab_model->GetWebContentsAt(index);
-        if (!contents)
-            continue;
+  TabStripModel *tab_model = browser_->tab_strip_model();
+  int count = tab_model->count();
+  for (int index = 0; index < count; ++index) {
+    content::WebContents *contents = tab_model->GetWebContentsAt(index);
+    if (!contents)
+      continue;
 
-        GURL site_url = contents->GetMainFrame()->GetSiteInstance()->GetSiteURL();
-        bool is_ntp = site_url == GURL(chrome::kChromeUINewTabPageURL) ||
-                      site_url == GURL(chrome::kChromeUINewTabPageThirdPartyURL) ||
-                      site_url == GURL("chrome-search://local-ntp/local-ntp.html") ||
-                      site_url == GURL("chrome-search://local-ntp/new-ntp.html");
+    GURL site_url = contents->GetMainFrame()->GetSiteInstance()->GetSiteURL();
+    bool is_ntp =
+        site_url == GURL(chrome::kChromeUINewTabPageURL) ||
+        site_url == GURL(chrome::kChromeUINewTabPageThirdPartyURL) ||
+        site_url == GURL("chrome-search://local-ntp/local-ntp.html") ||
+        site_url == GURL("chrome-search://local-ntp/new-ntp.html");
 
-        if (!is_ntp) {
-            InstantService* instant_service =
-                InstantServiceFactory::GetForProfile(profile());
-            if (instant_service) {
-                content::RenderProcessHost* rph =
-                    contents->GetMainFrame()->GetProcess();
-                is_ntp = instant_service->IsInstantProcess(rph->GetID());
-            }
-        }
-
-        if (!is_ntp)
-            continue;
-
-        // When default search engine is changed navigate to chrome://newtab which
-        // will redirect to the new tab page associated with the search engine.
-        GURL url("chrome-search://local-ntp/local-ntp.html");
-        content::NavigationController::LoadURLParams params(url);
-        params.should_replace_current_entry = true;
-        params.referrer = content::Referrer();
-        params.transition_type = ui::PAGE_TRANSITION_RELOAD;
-        contents->GetController().LoadURLWithParams(params);
+    if (!is_ntp) {
+      InstantService *instant_service =
+          InstantServiceFactory::GetForProfile(profile());
+      if (instant_service) {
+        content::RenderProcessHost *rph =
+            contents->GetMainFrame()->GetProcess();
+        is_ntp = instant_service->IsInstantProcess(rph->GetID());
+      }
     }
+
+    if (!is_ntp)
+      continue;
+
+    // When default search engine is changed navigate to chrome://newtab which
+    // will redirect to the new tab page associated with the search engine.
+    GURL url("chrome-search://local-ntp/local-ntp.html");
+    content::NavigationController::LoadURLParams params(url);
+    params.should_replace_current_entry = true;
+    params.referrer = content::Referrer();
+    params.transition_type = ui::PAGE_TRANSITION_RELOAD;
+    contents->GetController().LoadURLWithParams(params);
+  }
 }
 
-Profile* BrowserInstantController::profile() const {
-    return browser_->profile();
+Profile *BrowserInstantController::profile() const {
+  return browser_->profile();
 }

@@ -14,44 +14,44 @@ namespace content {
 class BrowserContext;
 class NavigationEntry;
 class WebContents;
-}
+} // namespace content
 
 namespace search {
 
 // Returns whether Google is selected as the default search engine.
-bool DefaultSearchProviderIsGoogle(Profile* profile);
+bool DefaultSearchProviderIsGoogle(Profile *profile);
 
 // Returns true if |url| corresponds to a New Tab page or its service worker.
-bool IsNTPOrRelatedURL(const GURL& url, Profile* profile);
+bool IsNTPOrRelatedURL(const GURL &url, Profile *profile);
 
 // Returns whether a |url| corresponds to a New Tab page.
-bool IsNTPURL(const GURL& url);
+bool IsNTPURL(const GURL &url);
 
 // Returns true if the active navigation entry of |contents| is a New Tab page
 // rendered in an Instant process. This is the last committed entry if it
 // exists, and otherwise the visible entry.
-bool IsInstantNTP(content::WebContents* contents);
+bool IsInstantNTP(content::WebContents *contents);
 
 // Same as IsInstantNTP but uses |nav_entry| to determine the URL for the page
 // instead of using the visible entry.
-bool NavEntryIsInstantNTP(content::WebContents* contents,
-                          content::NavigationEntry* nav_entry);
+bool NavEntryIsInstantNTP(content::WebContents *contents,
+                          content::NavigationEntry *nav_entry);
 
 // Returns true if |url| corresponds to a New Tab page that would get rendered
 // in an Instant process.
-bool IsInstantNTPURL(const GURL& url, Profile* profile);
+bool IsInstantNTPURL(const GURL &url, Profile *profile);
 
 // Returns the New Tab page URL for the given |profile|.
-GURL GetNewTabPageURL(Profile* profile);
+GURL GetNewTabPageURL(Profile *profile);
 
 #if !defined(OS_ANDROID) || true
 
 // Returns true if |url| should be rendered in the Instant renderer process.
-bool ShouldAssignURLToInstantRenderer(const GURL& url, Profile* profile);
+bool ShouldAssignURLToInstantRenderer(const GURL &url, Profile *profile);
 
 // Returns true if the Instant |site_url| should use process per site.
-bool ShouldUseProcessPerSiteForInstantSiteURL(const GURL& site_url,
-        Profile* profile);
+bool ShouldUseProcessPerSiteForInstantSiteURL(const GURL &site_url,
+                                              Profile *profile);
 
 // Transforms the input |url| into its "effective URL". |url| must be an
 // Instant URL, i.e. ShouldAssignURLToInstantRenderer must return true. The
@@ -71,7 +71,7 @@ bool ShouldUseProcessPerSiteForInstantSiteURL(const GURL& site_url,
 // If |url| is that of the online NTP, its host is replaced with "remote-ntp".
 // This forces the NTP and search results pages to have different SiteIntances,
 // and hence different processes.
-GURL GetEffectiveURLForInstant(const GURL& url, Profile* profile);
+GURL GetEffectiveURLForInstant(const GURL &url, Profile *profile);
 
 // Rewrites |url| to the actual NTP URL to use if
 //   1. |url| is "chrome://newtab" or starts with "chrome-search://local-ntp",
@@ -79,14 +79,14 @@ GURL GetEffectiveURLForInstant(const GURL& url, Profile* profile);
 //   3. |browser_context| doesn't correspond to an incognito profile.
 // chrome://new-tab-page or chrome://new-tab-page-third-party to handle
 // unexplained usage.
-bool HandleNewTabURLRewrite(GURL* url,
-                            content::BrowserContext* browser_context);
+bool HandleNewTabURLRewrite(GURL *url,
+                            content::BrowserContext *browser_context);
 // Reverses the operation from HandleNewTabURLRewrite.
-bool HandleNewTabURLReverseRewrite(GURL* url,
-                                   content::BrowserContext* browser_context);
+bool HandleNewTabURLReverseRewrite(GURL *url,
+                                   content::BrowserContext *browser_context);
 
-#endif  // !defined(OS_ANDROID)
+#endif // !defined(OS_ANDROID)
 
-}  // namespace search
+} // namespace search
 
-#endif  // CHROME_BROWSER_SEARCH_SEARCH_H_
+#endif // CHROME_BROWSER_SEARCH_SEARCH_H_

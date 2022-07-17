@@ -23,88 +23,85 @@
 #if defined(OS_ANDROID)
 static jlong
 JNI_ChromeAutocompleteSchemeClassifier_CreateAutocompleteClassifier(
-    JNIEnv* env,
-    const base::android::JavaParamRef<jobject>& jprofile) {
-    Profile* profile = ProfileAndroid::FromProfileAndroid(jprofile);
-    DCHECK(profile);
+    JNIEnv *env, const base::android::JavaParamRef<jobject> &jprofile) {
+  Profile *profile = ProfileAndroid::FromProfileAndroid(jprofile);
+  DCHECK(profile);
 
-    return reinterpret_cast<intptr_t>(
-               new ChromeAutocompleteSchemeClassifier(profile));
+  return reinterpret_cast<intptr_t>(
+      new ChromeAutocompleteSchemeClassifier(profile));
 }
 
 static void JNI_ChromeAutocompleteSchemeClassifier_DeleteAutocompleteClassifier(
-    JNIEnv* env,
-    jlong chrome_autocomplete_scheme_classifier) {
-    delete reinterpret_cast<ChromeAutocompleteSchemeClassifier*>(
-        chrome_autocomplete_scheme_classifier);
+    JNIEnv *env, jlong chrome_autocomplete_scheme_classifier) {
+  delete reinterpret_cast<ChromeAutocompleteSchemeClassifier *>(
+      chrome_autocomplete_scheme_classifier);
 }
 #endif
 
 ChromeAutocompleteSchemeClassifier::ChromeAutocompleteSchemeClassifier(
-    Profile* profile)
-    : profile_(profile) {
-}
+    Profile *profile)
+    : profile_(profile) {}
 
-ChromeAutocompleteSchemeClassifier::~ChromeAutocompleteSchemeClassifier() {
-}
+ChromeAutocompleteSchemeClassifier::~ChromeAutocompleteSchemeClassifier() {}
 
 metrics::OmniboxInputType
 ChromeAutocompleteSchemeClassifier::GetInputTypeForScheme(
-    const std::string& scheme) const {
-    if (scheme.empty()) {
-        return metrics::OmniboxInputType::EMPTY;
-    }
-    if (base::IsStringASCII(scheme) &&
-            (ProfileIOData::IsHandledProtocol(scheme) ||
-             base::LowerCaseEqualsASCII(scheme, content::kViewSourceScheme) ||
-             base::LowerCaseEqualsASCII(scheme, url::kJavaScriptScheme) ||
-             base::LowerCaseEqualsASCII(scheme, "kiwi") ||
-             base::LowerCaseEqualsASCII(scheme, url::kDataScheme))) {
-        return metrics::OmniboxInputType::URL;
-    }
-
-    // Also check for schemes registered via registerProtocolHandler(), which
-    // can be handled by web pages/apps.
-    ProtocolHandlerRegistry* registry = profile_ ?
-                                        ProtocolHandlerRegistryFactory::GetForBrowserContext(profile_) : NULL;
-    if (registry && registry->IsHandledProtocol(scheme))
-        return metrics::OmniboxInputType::URL;
-
-    // Not an internal protocol; check if it's an external protocol, i.e. one
-    // that's registered on the user's OS and will shell out to another program.
-    //
-    // We need to do this after the checks above because some internally
-    // handlable schemes (e.g. "javascript") may be treated as "blocked" by the
-    // external protocol handler because we don't want pages to open them, but
-    // users still can.
-    const ExternalProtocolHandler::BlockState block_state =
-        ExternalProtocolHandler::GetBlockState(scheme, nullptr, profile_);
-    switch (block_state) {
-    case ExternalProtocolHandler::DONT_BLOCK:
-        return metrics::OmniboxInputType::URL;
-
-    case ExternalProtocolHandler::BLOCK:
-        // If we don't want the user to open the URL, don't let it be navigated
-        // to at all.
-        return metrics::OmniboxInputType::QUERY;
-
-    case ExternalProtocolHandler::UNKNOWN: {
-#if defined(OS_LINUX) || defined(OS_CHROMEOS)
-        // Linux impl of GetApplicationNameForProtocol doesn't distinguish
-        // between URL schemes with handers and those without. This will
-        // make the default behaviour be search on Linux.
-        return metrics::OmniboxInputType::EMPTY;
-#else
-        // If block state is unknown, check if there is an application registered
-        // for the url scheme.
-        GURL url(scheme + "://");
-        std::u16string application_name =
-            shell_integration::GetApplicationNameForProtocol(url);
-        return application_name.empty() ? metrics::OmniboxInputType::EMPTY
-               : metrics::OmniboxInputType::URL;
-#endif  // defined(OS_LINUX) || defined(OS_CHROMEOS)
-    }
-    }
-    NOTREACHED();
+    const std::string &scheme) const {
+  if (scheme.empty()) {
     return metrics::OmniboxInputType::EMPTY;
+  }
+  if (base::IsStringASCII(scheme) &&
+      (ProfileIOData::IsHandledProtocol(scheme) ||
+       base::LowerCaseEqualsASCII(scheme, content::kViewSourceScheme) ||
+       base::LowerCaseEqualsASCII(scheme, url::kJavaScriptScheme) ||
+       base::LowerCaseEqualsASCII(scheme, "kiwi") ||
+       base::LowerCaseEqualsASCII(scheme, url::kDataScheme))) {
+    return metrics::OmniboxInputType::URL;
+  }
+
+  // Also check for schemes registered via registerProtocolHandler(), which
+  // can be handled by web pages/apps.
+  ProtocolHandlerRegistry *registry =
+      profile_ ? ProtocolHandlerRegistryFactory::GetForBrowserContext(profile_)
+               : NULL;
+  if (registry && registry->IsHandledProtocol(scheme))
+    return metrics::OmniboxInputType::URL;
+
+  // Not an internal protocol; check if it's an external protocol, i.e. one
+  // that's registered on the user's OS and will shell out to another program.
+  //
+  // We need to do this after the checks above because some internally
+  // handlable schemes (e.g. "javascript") may be treated as "blocked" by the
+  // external protocol handler because we don't want pages to open them, but
+  // users still can.
+  const ExternalProtocolHandler::BlockState block_state =
+      ExternalProtocolHandler::GetBlockState(scheme, nullptr, profile_);
+  switch (block_state) {
+  case ExternalProtocolHandler::DONT_BLOCK:
+    return metrics::OmniboxInputType::URL;
+
+  case ExternalProtocolHandler::BLOCK:
+    // If we don't want the user to open the URL, don't let it be navigated
+    // to at all.
+    return metrics::OmniboxInputType::QUERY;
+
+  case ExternalProtocolHandler::UNKNOWN: {
+#if defined(OS_LINUX) || defined(OS_CHROMEOS)
+    // Linux impl of GetApplicationNameForProtocol doesn't distinguish
+    // between URL schemes with handers and those without. This will
+    // make the default behaviour be search on Linux.
+    return metrics::OmniboxInputType::EMPTY;
+#else
+    // If block state is unknown, check if there is an application registered
+    // for the url scheme.
+    GURL url(scheme + "://");
+    std::u16string application_name =
+        shell_integration::GetApplicationNameForProtocol(url);
+    return application_name.empty() ? metrics::OmniboxInputType::EMPTY
+                                    : metrics::OmniboxInputType::URL;
+#endif // defined(OS_LINUX) || defined(OS_CHROMEOS)
+  }
+  }
+  NOTREACHED();
+  return metrics::OmniboxInputType::EMPTY;
 }

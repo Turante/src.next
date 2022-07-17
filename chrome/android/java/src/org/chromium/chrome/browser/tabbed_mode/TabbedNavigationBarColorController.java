@@ -7,15 +7,15 @@ package org.chromium.chrome.browser.tabbed_mode;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.res.Resources;
+import android.graphics.Color;
 import android.os.Build;
 import android.view.ViewGroup;
 import android.view.Window;
-
 import androidx.annotation.ColorInt;
 import androidx.annotation.Nullable;
-
 import org.chromium.base.ApiCompatibilityUtils;
 import org.chromium.base.CallbackController;
+import org.chromium.base.ContextUtils;
 import org.chromium.base.MathUtils;
 import org.chromium.base.supplier.ObservableSupplier;
 import org.chromium.base.supplier.OneshotSupplier;
@@ -37,242 +37,281 @@ import org.chromium.ui.UiUtils;
 import org.chromium.ui.util.ColorUtils;
 import org.chromium.ui.vr.VrModeObserver;
 
-import org.chromium.base.ContextUtils;
-import android.graphics.Color;
-
 /**
- * Controls the bottom system navigation bar color for the provided {@link Window}.
+ * Controls the bottom system navigation bar color for the provided {@link
+ * Window}.
  */
 @TargetApi(Build.VERSION_CODES.O_MR1)
 class TabbedNavigationBarColorController implements VrModeObserver {
-    private final Window mWindow;
-    private final ViewGroup mRootView;
-    private final Resources mResources;
-    private final FullscreenManager mFullScreenManager;
-    private final @ColorInt int mDefaultScrimColor;
+  private final Window mWindow;
+  private final ViewGroup mRootView;
+  private final Resources mResources;
+  private final FullscreenManager mFullScreenManager;
+  private final @ColorInt int mDefaultScrimColor;
 
-    // May be null if we return from the constructor early. Otherwise will be set.
-    private final @Nullable TabModelSelector mTabModelSelector;
-    private final @Nullable TabModelSelectorObserver mTabModelSelectorObserver;
-    private final @Nullable FullscreenManager.Observer mFullscreenObserver;
-    private @Nullable OverviewModeBehavior mOverviewModeBehavior;
-    private @Nullable OverviewModeObserver mOverviewModeObserver;
-    private CallbackController mCallbackController = new CallbackController();
+  // May be null if we return from the constructor early. Otherwise will be set.
+  private final @Nullable TabModelSelector mTabModelSelector;
+  private final @Nullable TabModelSelectorObserver mTabModelSelectorObserver;
+  private final @Nullable FullscreenManager.Observer mFullscreenObserver;
+  private @Nullable OverviewModeBehavior mOverviewModeBehavior;
+  private @Nullable OverviewModeObserver mOverviewModeObserver;
+  private CallbackController mCallbackController = new CallbackController();
 
-    private boolean mForceDarkNavigationBarColor;
-    private boolean mOverviewModeHiding;
-    private boolean mIsInFullscreen;
-    private float mNavigationBarScrimFraction;
+  private boolean mForceDarkNavigationBarColor;
+  private boolean mOverviewModeHiding;
+  private boolean mIsInFullscreen;
+  private float mNavigationBarScrimFraction;
 
-    /**
-     * Creates a new {@link TabbedNavigationBarColorController} instance.
-     * @param window The {@link Window} this controller should operate on.
-     * @param tabModelSelector The {@link TabModelSelector} used to determine which tab model is
-     *                         selected.
-     * @param overviewModeBehaviorSupplier An {@link ObservableSupplier} for the
-     *         {@link OverviewModeBehavior} associated with the containing activity.
-     * @param fullscreenManager The {@link FullscreenManager} used to determine if fullscreen is
-     *                          enabled
-     */
-    TabbedNavigationBarColorController(Window window, TabModelSelector tabModelSelector,
-            OneshotSupplier<OverviewModeBehavior> overviewModeBehaviorSupplier,
-            FullscreenManager fullscreenManager) {
-        assert Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1;
+  /**
+   * Creates a new {@link TabbedNavigationBarColorController} instance.
+   * @param window The {@link Window} this controller should operate on.
+   * @param tabModelSelector The {@link TabModelSelector} used to determine
+   *     which tab model is
+   *                         selected.
+   * @param overviewModeBehaviorSupplier An {@link ObservableSupplier} for the
+   *         {@link OverviewModeBehavior} associated with the containing
+   * activity.
+   * @param fullscreenManager The {@link FullscreenManager} used to determine if
+   *     fullscreen is
+   *                          enabled
+   */
+  TabbedNavigationBarColorController(
+      Window window, TabModelSelector tabModelSelector,
+      OneshotSupplier<OverviewModeBehavior> overviewModeBehaviorSupplier,
+      FullscreenManager fullscreenManager) {
+    assert Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1;
 
-        mWindow = window;
-        mRootView = (ViewGroup) mWindow.getDecorView().getRootView();
-        mResources = mRootView.getResources();
-        mDefaultScrimColor =
-                ApiCompatibilityUtils.getColor(mResources, R.color.default_scrim_color);
-        mFullScreenManager = fullscreenManager;
+    mWindow = window;
+    mRootView = (ViewGroup)mWindow.getDecorView().getRootView();
+    mResources = mRootView.getResources();
+    mDefaultScrimColor =
+        ApiCompatibilityUtils.getColor(mResources, R.color.default_scrim_color);
+    mFullScreenManager = fullscreenManager;
 
-        // If we're not using a light navigation bar, it will always be the same dark color so
-        // there's no need to register observers and manipulate coloring.
-        if (false)
-        if (!mResources.getBoolean(R.bool.window_light_navigation_bar)) {
-            mTabModelSelector = null;
-            mTabModelSelectorObserver = null;
-            mFullscreenObserver = null;
-            return;
-        }
+    // If we're not using a light navigation bar, it will always be the same
+    // dark color so there's no need to register observers and manipulate
+    // coloring.
+    if (false)
+      if (!mResources.getBoolean(R.bool.window_light_navigation_bar)) {
+        mTabModelSelector = null;
+        mTabModelSelectorObserver = null;
+        mFullscreenObserver = null;
+        return;
+      }
 
-        mTabModelSelector = tabModelSelector;
-        mTabModelSelectorObserver = new TabModelSelectorObserver() {
-            @Override
-            public void onTabModelSelected(TabModel newModel, TabModel oldModel) {
-                updateNavigationBarColor();
-            }
-        };
-        mTabModelSelector.addObserver(mTabModelSelectorObserver);
-        mFullscreenObserver = new FullscreenManager.Observer() {
-            @Override
-            public void onEnterFullscreen(Tab tab, FullscreenOptions options) {
-                mIsInFullscreen = true;
-                updateNavigationBarColor();
-            }
-            @Override
-            public void onExitFullscreen(Tab tab) {
-                mIsInFullscreen = false;
-                updateNavigationBarColor();
-            }
-        };
-        mFullScreenManager.addObserver(mFullscreenObserver);
-        overviewModeBehaviorSupplier.onAvailable(
-                mCallbackController.makeCancelable(this::setOverviewModeBehavior));
-
-        // TODO(https://crbug.com/806054): Observe tab loads to restrict black bottom nav to
-        // incognito NTP.
-
+    mTabModelSelector = tabModelSelector;
+    mTabModelSelectorObserver = new TabModelSelectorObserver() {
+      @Override
+      public void onTabModelSelected(TabModel newModel, TabModel oldModel) {
         updateNavigationBarColor();
-
-        VrModuleProvider.registerVrModeObserver(this);
-    }
-
-    /**
-     * Destroy this {@link TabbedNavigationBarColorController} instance.
-     */
-    public void destroy() {
-        if (mTabModelSelector != null) mTabModelSelector.removeObserver(mTabModelSelectorObserver);
-        if (mOverviewModeBehavior != null) {
-            mOverviewModeBehavior.removeOverviewModeObserver(mOverviewModeObserver);
-        }
-        if (mCallbackController != null) {
-            mCallbackController.destroy();
-            mCallbackController = null;
-        }
-        VrModuleProvider.unregisterVrModeObserver(this);
-        mFullScreenManager.removeObserver(mFullscreenObserver);
-    }
-
-    /**
-     * @param overviewModeBehavior The {@link OverviewModeBehavior} used to determine whether
-     *                             overview mode is showing.
-     */
-    private void setOverviewModeBehavior(OverviewModeBehavior overviewModeBehavior) {
-        if (mOverviewModeBehavior != null) {
-            mOverviewModeBehavior.removeOverviewModeObserver(mOverviewModeObserver);
-        }
-
-        mOverviewModeBehavior = overviewModeBehavior;
-        mOverviewModeObserver = new EmptyOverviewModeObserver() {
-            @Override
-            public void onOverviewModeStartedShowing(boolean showToolbar) {
-                mOverviewModeHiding = false;
-                updateNavigationBarColor();
-            }
-
-            @Override
-            public void onOverviewModeStartedHiding(boolean showToolbar, boolean delayAnimation) {
-                mOverviewModeHiding = true;
-                updateNavigationBarColor();
-            }
-
-            @Override
-            public void onOverviewModeFinishedHiding() {
-                mOverviewModeHiding = false;
-            }
-        };
-        mOverviewModeBehavior.addOverviewModeObserver(mOverviewModeObserver);
+      }
+    };
+    mTabModelSelector.addObserver(mTabModelSelectorObserver);
+    mFullscreenObserver = new FullscreenManager.Observer() {
+      @Override
+      public void onEnterFullscreen(Tab tab, FullscreenOptions options) {
+        mIsInFullscreen = true;
         updateNavigationBarColor();
+      }
+      @Override
+      public void onExitFullscreen(Tab tab) {
+        mIsInFullscreen = false;
+        updateNavigationBarColor();
+      }
+    };
+    mFullScreenManager.addObserver(mFullscreenObserver);
+    overviewModeBehaviorSupplier.onAvailable(
+        mCallbackController.makeCancelable(this::setOverviewModeBehavior));
+
+    // TODO(https://crbug.com/806054): Observe tab loads to restrict black
+    // bottom nav to incognito NTP.
+
+    updateNavigationBarColor();
+
+    VrModuleProvider.registerVrModeObserver(this);
+  }
+
+  /**
+   * Destroy this {@link TabbedNavigationBarColorController} instance.
+   */
+  public void destroy() {
+    if (mTabModelSelector != null)
+      mTabModelSelector.removeObserver(mTabModelSelectorObserver);
+    if (mOverviewModeBehavior != null) {
+      mOverviewModeBehavior.removeOverviewModeObserver(mOverviewModeObserver);
+    }
+    if (mCallbackController != null) {
+      mCallbackController.destroy();
+      mCallbackController = null;
+    }
+    VrModuleProvider.unregisterVrModeObserver(this);
+    mFullScreenManager.removeObserver(mFullscreenObserver);
+  }
+
+  /**
+   * @param overviewModeBehavior The {@link OverviewModeBehavior} used to
+   *     determine whether
+   *                             overview mode is showing.
+   */
+  private void
+  setOverviewModeBehavior(OverviewModeBehavior overviewModeBehavior) {
+    if (mOverviewModeBehavior != null) {
+      mOverviewModeBehavior.removeOverviewModeObserver(mOverviewModeObserver);
     }
 
-    @Override
-    public void onExitVr() {
-        // The platform ignores the light navigation bar system UI flag when launching an Activity
-        // in VR mode, so we need to restore it when VR is exited.
-        UiUtils.setNavigationBarIconColor(mRootView, !mForceDarkNavigationBarColor);
+    mOverviewModeBehavior = overviewModeBehavior;
+    mOverviewModeObserver = new EmptyOverviewModeObserver() {
+      @Override
+      public void onOverviewModeStartedShowing(boolean showToolbar) {
+        mOverviewModeHiding = false;
+        updateNavigationBarColor();
+      }
+
+      @Override
+      public void onOverviewModeStartedHiding(boolean showToolbar,
+                                              boolean delayAnimation) {
+        mOverviewModeHiding = true;
+        updateNavigationBarColor();
+      }
+
+      @Override
+      public void onOverviewModeFinishedHiding() {
+        mOverviewModeHiding = false;
+      }
+    };
+    mOverviewModeBehavior.addOverviewModeObserver(mOverviewModeObserver);
+    updateNavigationBarColor();
+  }
+
+  @Override
+  public void onExitVr() {
+    // The platform ignores the light navigation bar system UI flag when
+    // launching an Activity in VR mode, so we need to restore it when VR is
+    // exited.
+    UiUtils.setNavigationBarIconColor(mRootView, !mForceDarkNavigationBarColor);
+  }
+
+  @Override
+  public void onEnterVr() {}
+
+  @SuppressLint("NewApi")
+  private void updateNavigationBarColor() {
+    boolean forceDarkNavigation;
+    if (DeviceClassManager.enableAccessibilityLayout(mRootView.getContext()) ||
+        TabUiFeatureUtilities.isGridTabSwitcherEnabled(
+            mRootView.getContext()) ||
+        true) {
+      forceDarkNavigation = mTabModelSelector.isIncognitoSelected();
+    } else {
+      boolean overviewVisible = mOverviewModeBehavior != null &&
+                                mOverviewModeBehavior.overviewVisible() &&
+                                !mOverviewModeHiding;
+      forceDarkNavigation =
+          mTabModelSelector.isIncognitoSelected() && !overviewVisible;
     }
 
-    @Override
-    public void onEnterVr() {}
+    forceDarkNavigation &= !UiUtils.isSystemUiThemingDisabled();
+    forceDarkNavigation |= mIsInFullscreen;
 
-    @SuppressLint("NewApi")
-    private void updateNavigationBarColor() {
-        boolean forceDarkNavigation;
-        if (DeviceClassManager.enableAccessibilityLayout(mRootView.getContext())
-                || TabUiFeatureUtilities.isGridTabSwitcherEnabled(mRootView.getContext()) || true) {
-            forceDarkNavigation = mTabModelSelector.isIncognitoSelected();
-        } else {
-            boolean overviewVisible = mOverviewModeBehavior != null
-                    && mOverviewModeBehavior.overviewVisible() && !mOverviewModeHiding;
-            forceDarkNavigation = mTabModelSelector.isIncognitoSelected() && !overviewVisible;
-        }
+    if (ContextUtils.getAppSharedPreferences().getBoolean(
+            "darken_websites_enabled", false) ||
+        ContextUtils.getAppSharedPreferences().getInt("ui_theme_setting", 0) ==
+            2)
+      forceDarkNavigation = true;
 
-        forceDarkNavigation &= !UiUtils.isSystemUiThemingDisabled();
-        forceDarkNavigation |= mIsInFullscreen;
+    if (mForceDarkNavigationBarColor == forceDarkNavigation)
+      return;
 
-        if (ContextUtils.getAppSharedPreferences().getBoolean("darken_websites_enabled", false) || ContextUtils.getAppSharedPreferences().getInt("ui_theme_setting", 0) == 2)
-            forceDarkNavigation = true;
+    mForceDarkNavigationBarColor = forceDarkNavigation;
 
-        if (mForceDarkNavigationBarColor == forceDarkNavigation) return;
+    mWindow.setNavigationBarColor(
+        getNavigationBarColor(mForceDarkNavigationBarColor));
+    setNavigationBarDividerColor();
+    UiUtils.setNavigationBarIconColor(mRootView, !mForceDarkNavigationBarColor);
+  }
 
-        mForceDarkNavigationBarColor = forceDarkNavigation;
-
-        mWindow.setNavigationBarColor(getNavigationBarColor(mForceDarkNavigationBarColor));
-        setNavigationBarDividerColor();
-        UiUtils.setNavigationBarIconColor(mRootView, !mForceDarkNavigationBarColor);
+  @SuppressLint("NewApi")
+  private void setNavigationBarDividerColor() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+      mWindow.setNavigationBarDividerColor(
+          getNavigationBarDividerColor(mForceDarkNavigationBarColor));
     }
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
+        (ContextUtils.getAppSharedPreferences().getBoolean(
+             "darken_websites_enabled", false) ||
+         ContextUtils.getAppSharedPreferences().getInt("ui_theme_setting", 0) ==
+             2))
+      mWindow.setNavigationBarDividerColor(Color.parseColor("#FF000000"));
+  }
 
-    @SuppressLint("NewApi")
-    private void setNavigationBarDividerColor() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            mWindow.setNavigationBarDividerColor(
-                    getNavigationBarDividerColor(mForceDarkNavigationBarColor));
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && (ContextUtils.getAppSharedPreferences().getBoolean("darken_websites_enabled", false) || ContextUtils.getAppSharedPreferences().getInt("ui_theme_setting", 0) == 2))
-            mWindow.setNavigationBarDividerColor(Color.parseColor("#FF000000"));
+  /**
+   * Update the scrim amount on the navigation bar.
+   * @param fraction The scrim fraction in range [0, 1].
+   */
+  public void setNavigationBarScrimFraction(float fraction) {
+    mNavigationBarScrimFraction = fraction;
+    // https://forums.oneplus.com/threads/cannot-set-navigation-bar-color-to-pure-black-ff000000-via-values-xml.908719/
+    // navigation bar cannot be set to pure black to protect the display
+    if (ContextUtils.getAppSharedPreferences().getBoolean(
+            "darken_websites_enabled", false) ||
+        ContextUtils.getAppSharedPreferences().getInt("ui_theme_setting", 0) ==
+            2)
+      mWindow.setNavigationBarColor(Color.parseColor("#FF000000"));
+    else
+      mWindow.setNavigationBarColor(applyCurrentScrimToColor(
+          getNavigationBarColor(mForceDarkNavigationBarColor)));
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+      mWindow.setNavigationBarDividerColor(applyCurrentScrimToColor(
+          getNavigationBarDividerColor(mForceDarkNavigationBarColor)));
     }
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
+        (ContextUtils.getAppSharedPreferences().getBoolean(
+             "darken_websites_enabled", false) ||
+         ContextUtils.getAppSharedPreferences().getInt("ui_theme_setting", 0) ==
+             2))
+      mWindow.setNavigationBarDividerColor(Color.parseColor("#FF000000"));
 
-    /**
-     * Update the scrim amount on the navigation bar.
-     * @param fraction The scrim fraction in range [0, 1].
-     */
-    public void setNavigationBarScrimFraction(float fraction) {
-        mNavigationBarScrimFraction = fraction;
-        // https://forums.oneplus.com/threads/cannot-set-navigation-bar-color-to-pure-black-ff000000-via-values-xml.908719/
-        // navigation bar cannot be set to pure black to protect the display
-        if (ContextUtils.getAppSharedPreferences().getBoolean("darken_websites_enabled", false) || ContextUtils.getAppSharedPreferences().getInt("ui_theme_setting", 0) == 2)
-        mWindow.setNavigationBarColor(Color.parseColor("#FF000000"));
-        else
-        mWindow.setNavigationBarColor(
-                applyCurrentScrimToColor(getNavigationBarColor(mForceDarkNavigationBarColor)));
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            mWindow.setNavigationBarDividerColor(applyCurrentScrimToColor(
-                    getNavigationBarDividerColor(mForceDarkNavigationBarColor)));
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && (ContextUtils.getAppSharedPreferences().getBoolean("darken_websites_enabled", false) || ContextUtils.getAppSharedPreferences().getInt("ui_theme_setting", 0) == 2))
-            mWindow.setNavigationBarDividerColor(Color.parseColor("#FF000000"));
-
-        // Adjust the color of navigation bar icons based on color state of the navigation bar.
-        if (MathUtils.areFloatsEqual(1f, fraction)) {
-            UiUtils.setNavigationBarIconColor(mRootView, false);
-        } else if (MathUtils.areFloatsEqual(0f, fraction)) {
-            UiUtils.setNavigationBarIconColor(mRootView, true);
-        }
+    // Adjust the color of navigation bar icons based on color state of the
+    // navigation bar.
+    if (MathUtils.areFloatsEqual(1f, fraction)) {
+      UiUtils.setNavigationBarIconColor(mRootView, false);
+    } else if (MathUtils.areFloatsEqual(0f, fraction)) {
+      UiUtils.setNavigationBarIconColor(mRootView, true);
     }
+  }
 
-    private @ColorInt int getNavigationBarColor(boolean forceDarkNavigationBar) {
-        if (ContextUtils.getAppSharedPreferences().getBoolean("darken_websites_enabled", false) || ContextUtils.getAppSharedPreferences().getInt("ui_theme_setting", 0) == 2)
-            return Color.parseColor("#FF000000");
-        return ApiCompatibilityUtils.getColor(mResources,
-                forceDarkNavigationBar ? R.color.toolbar_background_primary_dark
-                                       : R.color.bottom_system_nav_color);
-    }
+  private @ColorInt int getNavigationBarColor(boolean forceDarkNavigationBar) {
+    if (ContextUtils.getAppSharedPreferences().getBoolean(
+            "darken_websites_enabled", false) ||
+        ContextUtils.getAppSharedPreferences().getInt("ui_theme_setting", 0) ==
+            2)
+      return Color.parseColor("#FF000000");
+    return ApiCompatibilityUtils.getColor(
+        mResources, forceDarkNavigationBar
+                        ? R.color.toolbar_background_primary_dark
+                        : R.color.bottom_system_nav_color);
+  }
 
-    private @ColorInt int getNavigationBarDividerColor(boolean forceDarkNavigationBar) {
-        if (ContextUtils.getAppSharedPreferences().getBoolean("darken_websites_enabled", false) || ContextUtils.getAppSharedPreferences().getInt("ui_theme_setting", 0) == 2)
-            return Color.parseColor("#FF000000");
-        return forceDarkNavigationBar
-                ? ApiCompatibilityUtils.getColor(
-                        mResources, R.color.bottom_system_nav_divider_color_light)
-                : SemanticColorUtils.getBottomSystemNavDividerColor(mWindow.getContext());
-    }
+  private @ColorInt
+  int getNavigationBarDividerColor(boolean forceDarkNavigationBar) {
+    if (ContextUtils.getAppSharedPreferences().getBoolean(
+            "darken_websites_enabled", false) ||
+        ContextUtils.getAppSharedPreferences().getInt("ui_theme_setting", 0) ==
+            2)
+      return Color.parseColor("#FF000000");
+    return forceDarkNavigationBar
+        ? ApiCompatibilityUtils.getColor(
+              mResources, R.color.bottom_system_nav_divider_color_light)
+        : SemanticColorUtils.getBottomSystemNavDividerColor(
+              mWindow.getContext());
+  }
 
-    private @ColorInt int applyCurrentScrimToColor(@ColorInt int color) {
-        // Apply a color overlay.
-        float scrimColorAlpha = (mDefaultScrimColor >>> 24) / 255f;
-        int scrimColorOpaque = mDefaultScrimColor & 0xFF000000;
-        return ColorUtils.getColorWithOverlay(
-                color, scrimColorOpaque, mNavigationBarScrimFraction * scrimColorAlpha, true);
-    }
+  private @ColorInt int applyCurrentScrimToColor(@ColorInt int color) {
+    // Apply a color overlay.
+    float scrimColorAlpha = (mDefaultScrimColor >>> 24) / 255f;
+    int scrimColorOpaque = mDefaultScrimColor & 0xFF000000;
+    return ColorUtils.getColorWithOverlay(
+        color, scrimColorOpaque, mNavigationBarScrimFraction * scrimColorAlpha,
+        true);
+  }
 }

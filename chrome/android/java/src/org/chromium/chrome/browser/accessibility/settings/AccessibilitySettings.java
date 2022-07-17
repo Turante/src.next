@@ -4,17 +4,22 @@
 
 package org.chromium.chrome.browser.accessibility.settings;
 
+import android.app.Activity;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.provider.Settings;
-
+import androidx.appcompat.app.AlertDialog;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
-import androidx.appcompat.app.AlertDialog;
-
-import org.chromium.chrome.browser.ApplicationLifetime;
-
+import java.util.Timer;
+import java.util.TimerTask;
+import org.chromium.base.ContextUtils;
+import org.chromium.base.Log;
+import org.chromium.base.SysUtils;
 import org.chromium.chrome.R;
+import org.chromium.chrome.browser.ApplicationLifetime;
 import org.chromium.chrome.browser.accessibility.FontSizePrefs;
 import org.chromium.chrome.browser.accessibility.FontSizePrefs.FontSizePrefsObserver;
 import org.chromium.chrome.browser.image_descriptions.ImageDescriptionsController;
@@ -27,171 +32,176 @@ import org.chromium.components.browser_ui.settings.ChromeBaseCheckBoxPreference;
 import org.chromium.components.browser_ui.settings.SettingsUtils;
 import org.chromium.components.user_prefs.UserPrefs;
 import org.chromium.content_public.browser.ContentFeatureList;
-
-import android.app.Activity;
-import org.chromium.base.ContextUtils;
-import android.content.DialogInterface;
-
-import org.chromium.base.ContextUtils;
-import org.chromium.base.SysUtils;
-import org.chromium.base.Log;
 import org.chromium.ui.base.DeviceFormFactor;
-import android.content.SharedPreferences;
-
-import java.util.Timer;
-import java.util.TimerTask;
 
 /**
  * Fragment to keep track of all the accessibility related preferences.
  */
-public class AccessibilitySettings
-        extends PreferenceFragmentCompat implements Preference.OnPreferenceChangeListener {
-    static final String PREF_TEXT_SCALE = "text_scale";
-    static final String PREF_FORCE_ENABLE_ZOOM = "force_enable_zoom";
-    static final String PREF_READER_FOR_ACCESSIBILITY = "reader_for_accessibility";
-    static final String PREF_CAPTIONS = "captions";
-    static final String PREF_IMAGE_DESCRIPTIONS = "image_descriptions";
+public class AccessibilitySettings extends PreferenceFragmentCompat
+    implements Preference.OnPreferenceChangeListener {
+  static final String PREF_TEXT_SCALE = "text_scale";
+  static final String PREF_FORCE_ENABLE_ZOOM = "force_enable_zoom";
+  static final String PREF_READER_FOR_ACCESSIBILITY =
+      "reader_for_accessibility";
+  static final String PREF_CAPTIONS = "captions";
+  static final String PREF_IMAGE_DESCRIPTIONS = "image_descriptions";
 
-    private TextScalePreference mTextScalePref;
-    private ChromeBaseCheckBoxPreference mForceEnableZoomPref;
-    private ChromeBaseCheckBoxPreference mSideSwipePref;
-    private boolean mRecordFontSizeChangeOnStop;
-    private Timer mTimer;
-    private Activity mActivity;
+  private TextScalePreference mTextScalePref;
+  private ChromeBaseCheckBoxPreference mForceEnableZoomPref;
+  private ChromeBaseCheckBoxPreference mSideSwipePref;
+  private boolean mRecordFontSizeChangeOnStop;
+  private Timer mTimer;
+  private Activity mActivity;
 
-    private FontSizePrefs mFontSizePrefs = FontSizePrefs.getInstance();
-    private FontSizePrefsObserver mFontSizePrefsObserver = new FontSizePrefsObserver() {
+  private FontSizePrefs mFontSizePrefs = FontSizePrefs.getInstance();
+  private FontSizePrefsObserver mFontSizePrefsObserver =
+      new FontSizePrefsObserver() {
         @Override
-        public void onFontScaleFactorChanged(float fontScaleFactor, float userFontScaleFactor) {
-            mTextScalePref.updateFontScaleFactors(fontScaleFactor, userFontScaleFactor, true);
+        public void onFontScaleFactorChanged(float fontScaleFactor,
+                                             float userFontScaleFactor) {
+          mTextScalePref.updateFontScaleFactors(fontScaleFactor,
+                                                userFontScaleFactor, true);
         }
 
         @Override
         public void onForceEnableZoomChanged(boolean enabled) {
-            mForceEnableZoomPref.setChecked(enabled);
+          mForceEnableZoomPref.setChecked(enabled);
         }
-    };
+      };
 
-    @Override
-    public void onActivityCreated(Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
+  @Override
+  public void onActivityCreated(Bundle savedInstanceState) {
+    super.onActivityCreated(savedInstanceState);
 
-        getActivity().setTitle(R.string.prefs_accessibility);
-        setDivider(null);
+    getActivity().setTitle(R.string.prefs_accessibility);
+    setDivider(null);
+  }
+
+  @Override
+  public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
+    SettingsUtils.addPreferencesFromResource(this,
+                                             R.xml.accessibility_preferences);
+
+    mTextScalePref = (TextScalePreference)findPreference(PREF_TEXT_SCALE);
+    mTextScalePref.setOnPreferenceChangeListener(this);
+    mTextScalePref.updateFontScaleFactors(
+        mFontSizePrefs.getFontScaleFactor(),
+        mFontSizePrefs.getUserFontScaleFactor(), false);
+
+    mSideSwipePref =
+        (ChromeBaseCheckBoxPreference)findPreference("side_swipe_mode_enabled");
+    mSideSwipePref.setOnPreferenceChangeListener(this);
+    mSideSwipePref.setChecked(ContextUtils.getAppSharedPreferences().getBoolean(
+        "side_swipe_mode_enabled", true));
+
+    mForceEnableZoomPref =
+        (ChromeBaseCheckBoxPreference)findPreference(PREF_FORCE_ENABLE_ZOOM);
+    mForceEnableZoomPref.setOnPreferenceChangeListener(this);
+    mForceEnableZoomPref.setChecked(mFontSizePrefs.getForceEnableZoom());
+
+    ChromeBaseCheckBoxPreference readerForAccessibilityPref =
+        (ChromeBaseCheckBoxPreference)findPreference(
+            PREF_READER_FOR_ACCESSIBILITY);
+    readerForAccessibilityPref.setChecked(
+        UserPrefs.get(Profile.getLastUsedRegularProfile())
+            .getBoolean(Pref.READER_FOR_ACCESSIBILITY));
+    readerForAccessibilityPref.setOnPreferenceChangeListener(this);
+
+    ChromeBaseCheckBoxPreference mAccessibilityTabSwitcherPref =
+        (ChromeBaseCheckBoxPreference)findPreference(
+            ChromePreferenceKeys.ACCESSIBILITY_TAB_SWITCHER);
+    if (ChromeAccessibilityUtil.get().isAccessibilityEnabled()) {
+      mAccessibilityTabSwitcherPref.setChecked(
+          SharedPreferencesManager.getInstance().readBoolean(
+              ChromePreferenceKeys.ACCESSIBILITY_TAB_SWITCHER, true));
+    } else {
+      getPreferenceScreen().removePreference(mAccessibilityTabSwitcherPref);
     }
 
-    @Override
-    public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
-        SettingsUtils.addPreferencesFromResource(this, R.xml.accessibility_preferences);
+    Preference captions = findPreference(PREF_CAPTIONS);
+    captions.setOnPreferenceClickListener(preference -> {
+      Intent intent = new Intent(Settings.ACTION_CAPTIONING_SETTINGS);
 
-        mTextScalePref = (TextScalePreference) findPreference(PREF_TEXT_SCALE);
-        mTextScalePref.setOnPreferenceChangeListener(this);
-        mTextScalePref.updateFontScaleFactors(mFontSizePrefs.getFontScaleFactor(),
-                mFontSizePrefs.getUserFontScaleFactor(), false);
+      // Open the activity in a new task because the back button on the caption
+      // settings page navigates to the previous settings page instead of
+      // Chrome.
+      intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+      startActivity(intent);
 
+      return true;
+    });
 
-        mSideSwipePref = (ChromeBaseCheckBoxPreference) findPreference("side_swipe_mode_enabled");
-        mSideSwipePref.setOnPreferenceChangeListener(this);
-        mSideSwipePref.setChecked(ContextUtils.getAppSharedPreferences().getBoolean("side_swipe_mode_enabled", true));
+    Preference imageDescriptionsPreference =
+        findPreference(PREF_IMAGE_DESCRIPTIONS);
+    imageDescriptionsPreference.setVisible(
+        ImageDescriptionsController.getInstance()
+            .shouldShowImageDescriptionsMenuItem());
 
-        mForceEnableZoomPref =
-                (ChromeBaseCheckBoxPreference) findPreference(PREF_FORCE_ENABLE_ZOOM);
-        mForceEnableZoomPref.setOnPreferenceChangeListener(this);
-        mForceEnableZoomPref.setChecked(mFontSizePrefs.getForceEnableZoom());
+    ((ChromeBaseCheckBoxPreference)findPreference("text_rewrap"))
+        .setOnPreferenceChangeListener(this);
+    ((ChromeBaseCheckBoxPreference)findPreference("show_extensions_first"))
+        .setOnPreferenceChangeListener(this);
+  }
 
-        ChromeBaseCheckBoxPreference readerForAccessibilityPref =
-                (ChromeBaseCheckBoxPreference) findPreference(PREF_READER_FOR_ACCESSIBILITY);
-        readerForAccessibilityPref.setChecked(UserPrefs.get(Profile.getLastUsedRegularProfile())
-                                                      .getBoolean(Pref.READER_FOR_ACCESSIBILITY));
-        readerForAccessibilityPref.setOnPreferenceChangeListener(this);
+  @Override
+  public void onStart() {
+    super.onStart();
+    mFontSizePrefs.addObserver(mFontSizePrefsObserver);
+  }
 
-        ChromeBaseCheckBoxPreference mAccessibilityTabSwitcherPref =
-                (ChromeBaseCheckBoxPreference) findPreference(
-                        ChromePreferenceKeys.ACCESSIBILITY_TAB_SWITCHER);
-        if (ChromeAccessibilityUtil.get().isAccessibilityEnabled()) {
-            mAccessibilityTabSwitcherPref.setChecked(
-                    SharedPreferencesManager.getInstance().readBoolean(
-                            ChromePreferenceKeys.ACCESSIBILITY_TAB_SWITCHER, true));
-        } else {
-            getPreferenceScreen().removePreference(mAccessibilityTabSwitcherPref);
-        }
+  @Override
+  public void onStop() {
+    mFontSizePrefs.removeObserver(mFontSizePrefsObserver);
+    if (mRecordFontSizeChangeOnStop) {
+      mFontSizePrefs.recordUserFontPrefChange();
+      mRecordFontSizeChangeOnStop = false;
+    }
+    super.onStop();
+  }
 
-        Preference captions = findPreference(PREF_CAPTIONS);
-        captions.setOnPreferenceClickListener(preference -> {
-            Intent intent = new Intent(Settings.ACTION_CAPTIONING_SETTINGS);
-
-            // Open the activity in a new task because the back button on the caption
-            // settings page navigates to the previous settings page instead of Chrome.
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
-
-            return true;
-        });
-
-        Preference imageDescriptionsPreference = findPreference(PREF_IMAGE_DESCRIPTIONS);
-        imageDescriptionsPreference.setVisible(
-                ImageDescriptionsController.getInstance().shouldShowImageDescriptionsMenuItem());
-
-        ((ChromeBaseCheckBoxPreference) findPreference("text_rewrap")).setOnPreferenceChangeListener(this);
-        ((ChromeBaseCheckBoxPreference) findPreference("show_extensions_first")).setOnPreferenceChangeListener(this);
+  @Override
+  public boolean onPreferenceChange(Preference preference, Object newValue) {
+    if (PREF_TEXT_SCALE.equals(preference.getKey())) {
+      mRecordFontSizeChangeOnStop = true;
+      mFontSizePrefs.setUserFontScaleFactor((Float)newValue);
+    } else if (PREF_FORCE_ENABLE_ZOOM.equals(preference.getKey())) {
+      mFontSizePrefs.setForceEnableZoomFromUser((Boolean)newValue);
+    } else if (PREF_READER_FOR_ACCESSIBILITY.equals(preference.getKey())) {
+      UserPrefs.get(Profile.getLastUsedRegularProfile())
+          .setBoolean(Pref.READER_FOR_ACCESSIBILITY, (Boolean)newValue);
+    } else if ("side_swipe_mode_enabled".equals(preference.getKey())) {
+      AskForRelaunch(getActivity());
+    } else if ("enable_overscroll_button".equals(preference.getKey())) {
+      AskForRelaunch(getActivity());
+    } else if ("text_rewrap".equals(preference.getKey())) {
+      AskForRelaunch(getActivity());
     }
 
-    @Override
-    public void onStart() {
-        super.onStart();
-        mFontSizePrefs.addObserver(mFontSizePrefsObserver);
-    }
+    return true;
+  }
 
-    @Override
-    public void onStop() {
-        mFontSizePrefs.removeObserver(mFontSizePrefsObserver);
-        if (mRecordFontSizeChangeOnStop) {
-            mFontSizePrefs.recordUserFontPrefChange();
-            mRecordFontSizeChangeOnStop = false;
-        }
-        super.onStop();
-    }
-
-    @Override
-    public boolean onPreferenceChange(Preference preference, Object newValue) {
-        if (PREF_TEXT_SCALE.equals(preference.getKey())) {
-            mRecordFontSizeChangeOnStop = true;
-            mFontSizePrefs.setUserFontScaleFactor((Float) newValue);
-        } else if (PREF_FORCE_ENABLE_ZOOM.equals(preference.getKey())) {
-            mFontSizePrefs.setForceEnableZoomFromUser((Boolean) newValue);
-        } else if (PREF_READER_FOR_ACCESSIBILITY.equals(preference.getKey())) {
-            UserPrefs.get(Profile.getLastUsedRegularProfile())
-                    .setBoolean(Pref.READER_FOR_ACCESSIBILITY, (Boolean) newValue);
-        } else if ("side_swipe_mode_enabled".equals(preference.getKey())) {
-            AskForRelaunch(getActivity());
-        } else if ("enable_overscroll_button".equals(preference.getKey())) {
-            AskForRelaunch(getActivity());
-        } else if ("text_rewrap".equals(preference.getKey())) {
-            AskForRelaunch(getActivity());
-        }
-
-        return true;
-    }
-
-    public static void AskForRelaunch(Activity activity) {
-        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(activity);
-         alertDialogBuilder
-            .setMessage(R.string.preferences_restart_is_needed)
-            .setCancelable(true)
-            .setPositiveButton(R.string.preferences_restart_now, new DialogInterface.OnClickListener() {
-              @Override
-              public void onClick(DialogInterface dialog, int id) {
-                  ApplicationLifetime.terminate(true);
-                  dialog.cancel();
-              }
-            })
-            .setNegativeButton(R.string.preferences_restart_later, new DialogInterface.OnClickListener() {
-              @Override
-              public void onClick(DialogInterface dialog,int id) {
-                  dialog.cancel();
-              }
-            });
-            AlertDialog alertDialog = alertDialogBuilder.create();
-            alertDialog.show();
-    }
+  public static void AskForRelaunch(Activity activity) {
+    AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(activity);
+    alertDialogBuilder.setMessage(R.string.preferences_restart_is_needed)
+        .setCancelable(true)
+        .setPositiveButton(R.string.preferences_restart_now,
+                           new DialogInterface.OnClickListener() {
+                             @Override
+                             public void onClick(DialogInterface dialog,
+                                                 int id) {
+                               ApplicationLifetime.terminate(true);
+                               dialog.cancel();
+                             }
+                           })
+        .setNegativeButton(R.string.preferences_restart_later,
+                           new DialogInterface.OnClickListener() {
+                             @Override
+                             public void onClick(DialogInterface dialog,
+                                                 int id) {
+                               dialog.cancel();
+                             }
+                           });
+    AlertDialog alertDialog = alertDialogBuilder.create();
+    alertDialog.show();
+  }
 }

@@ -9,10 +9,10 @@ import android.content.Context;
 import android.graphics.Rect;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-
+import java.util.List;
+import org.chromium.base.ContextUtils;
 import org.chromium.base.SysUtils;
 import org.chromium.base.metrics.RecordUserAction;
 import org.chromium.base.supplier.Supplier;
@@ -27,147 +27,164 @@ import org.chromium.components.browser_ui.widget.scrim.ScrimCoordinator;
 import org.chromium.ui.modelutil.PropertyModel;
 import org.chromium.ui.modelutil.PropertyModelChangeProcessor;
 
-import java.util.List;
-
-import org.chromium.base.ContextUtils;
-
 /**
  * A coordinator for TabGridDialog component. Manages the communication with
  * {@link TabListCoordinator} as well as the life-cycle of shared component
  * objects.
  */
-public class TabGridDialogCoordinator implements TabGridDialogMediator.DialogController {
-    private final String mComponentName;
-    private final TabListCoordinator mTabListCoordinator;
-    private final TabGridDialogMediator mMediator;
-    private final PropertyModel mModel;
-    private final PropertyModelChangeProcessor mModelChangeProcessor;
-    private final ViewGroup mRootView;
-    private TabSelectionEditorCoordinator mTabSelectionEditorCoordinator;
-    private TabGridDialogView mDialogView;
+public class TabGridDialogCoordinator
+    implements TabGridDialogMediator.DialogController {
+  private final String mComponentName;
+  private final TabListCoordinator mTabListCoordinator;
+  private final TabGridDialogMediator mMediator;
+  private final PropertyModel mModel;
+  private final PropertyModelChangeProcessor mModelChangeProcessor;
+  private final ViewGroup mRootView;
+  private TabSelectionEditorCoordinator mTabSelectionEditorCoordinator;
+  private TabGridDialogView mDialogView;
 
-    TabGridDialogCoordinator(Activity activity, TabModelSelector tabModelSelector,
-            TabContentManager tabContentManager, TabCreatorManager tabCreatorManager,
-            ViewGroup containerView, TabSwitcherMediator.ResetHandler resetHandler,
-            TabListMediator.GridCardOnClickListenerProvider gridCardOnClickListenerProvider,
-            TabGridDialogMediator.AnimationSourceViewProvider animationSourceViewProvider,
-            Supplier<ShareDelegate> shareDelegateSupplier, ScrimCoordinator scrimCoordinator,
-            ViewGroup rootView) {
-        mComponentName = animationSourceViewProvider == null ? "TabGridDialogFromStrip"
-                                                             : "TabGridDialogInSwitcher";
+  TabGridDialogCoordinator(
+      Activity activity, TabModelSelector tabModelSelector,
+      TabContentManager tabContentManager, TabCreatorManager tabCreatorManager,
+      ViewGroup containerView, TabSwitcherMediator.ResetHandler resetHandler,
+      TabListMediator
+          .GridCardOnClickListenerProvider gridCardOnClickListenerProvider,
+      TabGridDialogMediator
+          .AnimationSourceViewProvider animationSourceViewProvider,
+      Supplier<ShareDelegate> shareDelegateSupplier,
+      ScrimCoordinator scrimCoordinator, ViewGroup rootView) {
+    mComponentName = animationSourceViewProvider == null
+                         ? "TabGridDialogFromStrip"
+                         : "TabGridDialogInSwitcher";
 
-        mModel = new PropertyModel(TabGridPanelProperties.ALL_KEYS);
-        mRootView = rootView;
+    mModel = new PropertyModel(TabGridPanelProperties.ALL_KEYS);
+    mRootView = rootView;
 
-        mDialogView = containerView.findViewById(R.id.dialog_parent_view);
-        if (mDialogView == null) {
-            LayoutInflater.from(activity).inflate(
-                    R.layout.tab_grid_dialog_layout, containerView, true);
-            mDialogView = containerView.findViewById(R.id.dialog_parent_view);
-            mDialogView.setupScrimCoordinator(scrimCoordinator);
-        }
-        SnackbarManager snackbarManager =
-                new SnackbarManager(activity, mDialogView.getSnackBarContainer(), null);
+    mDialogView = containerView.findViewById(R.id.dialog_parent_view);
+    if (mDialogView == null) {
+      LayoutInflater.from(activity).inflate(R.layout.tab_grid_dialog_layout,
+                                            containerView, true);
+      mDialogView = containerView.findViewById(R.id.dialog_parent_view);
+      mDialogView.setupScrimCoordinator(scrimCoordinator);
+    }
+    SnackbarManager snackbarManager =
+        new SnackbarManager(activity, mDialogView.getSnackBarContainer(), null);
 
-        mMediator = new TabGridDialogMediator(activity, this, mModel, tabModelSelector,
-                tabCreatorManager, resetHandler, animationSourceViewProvider, shareDelegateSupplier,
-                snackbarManager, mComponentName);
+    mMediator = new TabGridDialogMediator(
+        activity, this, mModel, tabModelSelector, tabCreatorManager,
+        resetHandler, animationSourceViewProvider, shareDelegateSupplier,
+        snackbarManager, mComponentName);
 
-        // TODO(crbug.com/1031349) : Remove the inline mode logic here, make the constructor to take
-        // in a mode parameter instead.
-        int mode = TabListCoordinator.TabListMode.GRID;
-        if (TabUiFeatureUtilities.isTabGroupsAndroidContinuationEnabled(activity)
-                                && SysUtils.isLowEndDevice())
-            mode = TabListCoordinator.TabListMode.LIST;
-        if (ContextUtils.getAppSharedPreferences().getString("active_tabswitcher", "default").equals("classic") || ContextUtils.getAppSharedPreferences().getString("active_tabswitcher", "default").equals("grid"))
-            mode = TabListCoordinator.TabListMode.GRID;
-        mTabListCoordinator = new TabListCoordinator(mode,
-                activity, tabModelSelector, tabContentManager::getTabThumbnailWithCallback, null,
-                false, gridCardOnClickListenerProvider, mMediator.getTabGridDialogHandler(),
-                TabProperties.UiType.CLOSABLE, null, null, containerView, false, mComponentName,
-                rootView);
-        TabListRecyclerView recyclerView = mTabListCoordinator.getContainerView();
+    // TODO(crbug.com/1031349) : Remove the inline mode logic here, make the
+    // constructor to take in a mode parameter instead.
+    int mode = TabListCoordinator.TabListMode.GRID;
+    if (TabUiFeatureUtilities.isTabGroupsAndroidContinuationEnabled(activity) &&
+        SysUtils.isLowEndDevice())
+      mode = TabListCoordinator.TabListMode.LIST;
+    if (ContextUtils.getAppSharedPreferences()
+            .getString("active_tabswitcher", "default")
+            .equals("classic") ||
+        ContextUtils.getAppSharedPreferences()
+            .getString("active_tabswitcher", "default")
+            .equals("grid"))
+      mode = TabListCoordinator.TabListMode.GRID;
+    mTabListCoordinator = new TabListCoordinator(
+        mode, activity, tabModelSelector,
+        tabContentManager::getTabThumbnailWithCallback, null, false,
+        gridCardOnClickListenerProvider, mMediator.getTabGridDialogHandler(),
+        TabProperties.UiType.CLOSABLE, null, null, containerView, false,
+        mComponentName, rootView);
+    TabListRecyclerView recyclerView = mTabListCoordinator.getContainerView();
 
-        TabGroupUiToolbarView toolbarView =
-                (TabGroupUiToolbarView) LayoutInflater.from(activity).inflate(
-                        R.layout.bottom_tab_grid_toolbar, recyclerView, false);
-        toolbarView.setupDialogToolbarLayout();
-        if (!TabUiFeatureUtilities.isTabGroupsAndroidContinuationEnabled(activity)) {
-            toolbarView.hideTabGroupsContinuationWidgets();
-        }
-        mModelChangeProcessor = PropertyModelChangeProcessor.create(mModel,
-                new TabGridPanelViewBinder.ViewHolder(toolbarView, recyclerView, mDialogView),
-                TabGridPanelViewBinder::bind);
+    TabGroupUiToolbarView toolbarView =
+        (TabGroupUiToolbarView)LayoutInflater.from(activity).inflate(
+            R.layout.bottom_tab_grid_toolbar, recyclerView, false);
+    toolbarView.setupDialogToolbarLayout();
+    if (!TabUiFeatureUtilities.isTabGroupsAndroidContinuationEnabled(
+            activity)) {
+      toolbarView.hideTabGroupsContinuationWidgets();
+    }
+    mModelChangeProcessor = PropertyModelChangeProcessor.create(
+        mModel,
+        new TabGridPanelViewBinder.ViewHolder(toolbarView, recyclerView,
+                                              mDialogView),
+        TabGridPanelViewBinder::bind);
+  }
+
+  public void initWithNative(Context context, TabModelSelector tabModelSelector,
+                             TabContentManager tabContentManager,
+                             TabGroupTitleEditor tabGroupTitleEditor) {
+    TabSelectionEditorCoordinator.TabSelectionEditorController controller =
+        null;
+    if (TabUiFeatureUtilities.isTabGroupsAndroidContinuationEnabled(context)) {
+      @TabListCoordinator.TabListMode
+      int mode = TabListCoordinator.TabListMode.GRID;
+      if (SysUtils.isLowEndDevice())
+        mode = TabListCoordinator.TabListMode.LIST;
+      if (ContextUtils.getAppSharedPreferences()
+              .getString("active_tabswitcher", "default")
+              .equals("classic") ||
+          ContextUtils.getAppSharedPreferences()
+              .getString("active_tabswitcher", "default")
+              .equals("grid"))
+        mode = TabListCoordinator.TabListMode.GRID;
+      mTabSelectionEditorCoordinator = new TabSelectionEditorCoordinator(
+          context, mDialogView.findViewById(R.id.dialog_container_view),
+          tabModelSelector, tabContentManager, mode, mRootView);
+
+      controller = mTabSelectionEditorCoordinator.getController();
+    } else {
+      mTabSelectionEditorCoordinator = null;
     }
 
-    public void initWithNative(Context context, TabModelSelector tabModelSelector,
-            TabContentManager tabContentManager, TabGroupTitleEditor tabGroupTitleEditor) {
-        TabSelectionEditorCoordinator.TabSelectionEditorController controller = null;
-        if (TabUiFeatureUtilities.isTabGroupsAndroidContinuationEnabled(context)) {
-            @TabListCoordinator.TabListMode
-            int mode = TabListCoordinator.TabListMode.GRID;
-            if (SysUtils.isLowEndDevice())
-                mode = TabListCoordinator.TabListMode.LIST;
-            if (ContextUtils.getAppSharedPreferences().getString("active_tabswitcher", "default").equals("classic") || ContextUtils.getAppSharedPreferences().getString("active_tabswitcher", "default").equals("grid"))
-                mode = TabListCoordinator.TabListMode.GRID;
-            mTabSelectionEditorCoordinator = new TabSelectionEditorCoordinator(context,
-                    mDialogView.findViewById(R.id.dialog_container_view), tabModelSelector,
-                    tabContentManager, mode, mRootView);
-
-            controller = mTabSelectionEditorCoordinator.getController();
-        } else {
-            mTabSelectionEditorCoordinator = null;
-        }
-
-        mMediator.initWithNative(controller, tabGroupTitleEditor);
-        mTabListCoordinator.initWithNative(null);
+    mMediator.initWithNative(controller, tabGroupTitleEditor);
+    mTabListCoordinator.initWithNative(null);
+  }
+  /**
+   * Destroy any members that needs clean up.
+   */
+  public void destroy() {
+    mTabListCoordinator.onDestroy();
+    mMediator.destroy();
+    mModelChangeProcessor.destroy();
+    if (mTabSelectionEditorCoordinator != null) {
+      mTabSelectionEditorCoordinator.destroy();
     }
-    /**
-     * Destroy any members that needs clean up.
-     */
-    public void destroy() {
-        mTabListCoordinator.onDestroy();
-        mMediator.destroy();
-        mModelChangeProcessor.destroy();
-        if (mTabSelectionEditorCoordinator != null) {
-            mTabSelectionEditorCoordinator.destroy();
-        }
-    }
+  }
 
-    @Override
-    public boolean isVisible() {
-        return mMediator.isVisible();
-    }
+  @Override
+  public boolean isVisible() {
+    return mMediator.isVisible();
+  }
 
-    @NonNull
-    Rect getGlobalLocationOfCurrentThumbnail() {
-        mTabListCoordinator.updateThumbnailLocation();
-        Rect thumbnail = mTabListCoordinator.getThumbnailLocationOfCurrentTab();
-        Rect recyclerViewLocation = mTabListCoordinator.getRecyclerViewLocation();
-        thumbnail.offset(recyclerViewLocation.left, recyclerViewLocation.top);
-        return thumbnail;
-    }
+  @NonNull
+  Rect getGlobalLocationOfCurrentThumbnail() {
+    mTabListCoordinator.updateThumbnailLocation();
+    Rect thumbnail = mTabListCoordinator.getThumbnailLocationOfCurrentTab();
+    Rect recyclerViewLocation = mTabListCoordinator.getRecyclerViewLocation();
+    thumbnail.offset(recyclerViewLocation.left, recyclerViewLocation.top);
+    return thumbnail;
+  }
 
-    TabGridDialogMediator.DialogController getDialogController() {
-        return this;
-    }
+  TabGridDialogMediator.DialogController getDialogController() { return this; }
 
-    @Override
-    public void resetWithListOfTabs(@Nullable List<Tab> tabs) {
-        mTabListCoordinator.resetWithListOfTabs(tabs);
-        mMediator.onReset(tabs);
-    }
+  @Override
+  public void resetWithListOfTabs(@Nullable List<Tab> tabs) {
+    mTabListCoordinator.resetWithListOfTabs(tabs);
+    mMediator.onReset(tabs);
+  }
 
-    @Override
-    public void hideDialog(boolean showAnimation) {
-        mMediator.hideDialog(showAnimation);
-    }
+  @Override
+  public void hideDialog(boolean showAnimation) {
+    mMediator.hideDialog(showAnimation);
+  }
 
-    @Override
-    public boolean handleBackPressed() {
-        if (!isVisible()) return false;
-        mMediator.hideDialog(true);
-        RecordUserAction.record("TabGridDialog.Exit");
-        return true;
-    }
+  @Override
+  public boolean handleBackPressed() {
+    if (!isVisible())
+      return false;
+    mMediator.hideDialog(true);
+    RecordUserAction.record("TabGridDialog.Exit");
+    return true;
+  }
 }

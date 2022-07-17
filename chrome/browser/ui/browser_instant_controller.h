@@ -27,24 +27,25 @@ class Profile;
 // Google base URL changes while Google is the default search engine.
 class BrowserInstantController {
 public:
-    explicit BrowserInstantController(Browser* browser);
+  explicit BrowserInstantController(Browser *browser);
 
-    BrowserInstantController(const BrowserInstantController&) = delete;
-    BrowserInstantController& operator=(const BrowserInstantController&) = delete;
+  BrowserInstantController(const BrowserInstantController &) = delete;
+  BrowserInstantController &
+  operator=(const BrowserInstantController &) = delete;
 
-    ~BrowserInstantController();
+  ~BrowserInstantController();
 
 private:
-    void OnSearchEngineBaseURLChanged(
-        SearchEngineBaseURLTracker::ChangeReason change_reason);
+  void OnSearchEngineBaseURLChanged(
+      SearchEngineBaseURLTracker::ChangeReason change_reason);
 
-    Profile* profile() const;
+  Profile *profile() const;
 
-    const raw_ptr<Browser> browser_;
+  const raw_ptr<Browser> browser_;
 
-    InstantController instant_;
+  InstantController instant_;
 
-    std::unique_ptr<SearchEngineBaseURLTracker> search_engine_base_url_tracker_;
+  std::unique_ptr<SearchEngineBaseURLTracker> search_engine_base_url_tracker_;
 };
 
-#endif  // CHROME_BROWSER_UI_BROWSER_INSTANT_CONTROLLER_H_
+#endif // CHROME_BROWSER_UI_BROWSER_INSTANT_CONTROLLER_H_
