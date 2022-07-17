@@ -47,6 +47,7 @@ We also have more frequently builds of Kiwi here on the Github
 Kiwi is currently built for ARM, ARM64 and x86
 
 ## Features
+
 - Beautiful, customizable night mode for comfortable night time browsing.
 - Kiwi supports most Chrome desktop extensions! Get them from the Chrome Webstore and enable them in options ( ⋮ ) -> Extensions
 - Never strain your fingers again! Optional bottom address bar and support for easy one-handed usage
@@ -68,7 +69,6 @@ We also have other social communities managed by contributors
 <a href="https://www.reddit.com/r/kiwibrowser">
 <img src="https://img.shields.io/badge/Reddit-FF4500?style=for-the-badge&logo=reddit&logoColor=white"></a>
 
-
 ## License
 
 This repository is licensed under the same license as Chromium.
@@ -83,8 +83,7 @@ See `restricted` in https://opensource.google/docs/thirdparty/licenses/
 
 Verify before proposing code to Kiwi Browser that the code doesn't come from such restricted projects.
 
-
-***
+---
 
 Have fun with Kiwi!
 
